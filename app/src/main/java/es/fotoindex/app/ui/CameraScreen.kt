@@ -26,10 +26,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.camera.view.PreviewView
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.ui.platform.LocalLifecycleOwner
-
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.clickable
+import kotlinx.coroutines.delay
 
 @Composable
 fun CameraScreen() {
@@ -55,6 +61,28 @@ fun CameraScreen() {
     LaunchedEffect(Unit) {
         if (!hasCameraPermission) {
             permissionLauncher.launch(Manifest.permission.CAMERA)
+        }
+    }
+
+    var firstPhotoPath by remember {
+        mutableStateOf<String?>(null)
+    }
+
+    var secondPhotoPath by remember {
+        mutableStateOf<String?>(null)
+    }
+
+    var previewPhotoPath by remember {
+        mutableStateOf<String?>(null)
+    }
+
+    LaunchedEffect(previewPhotoPath) {
+
+        if (previewPhotoPath != null) {
+
+            delay(4000)
+
+            previewPhotoPath = null
         }
     }
 
@@ -93,12 +121,36 @@ fun CameraScreen() {
             }
 
 
-            AndroidView(
-                factory = { previewView },
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
-            )
+            ) {
+
+                AndroidView(
+                    factory = { previewView },
+                    modifier = Modifier.fillMaxSize()
+                )
+
+                if (previewPhotoPath != null) {
+
+                    AsyncImage(
+                        model = previewPhotoPath,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clickable {
+                                previewPhotoPath = null
+                            },
+                        contentScale = ContentScale.Fit
+                    )
+
+                    Text(
+                        text = "Toque la imagen para continuar",
+                        modifier = Modifier.align(Alignment.BottomCenter)
+                    )
+                }
+            }
 
         } else {
 
@@ -109,9 +161,38 @@ fun CameraScreen() {
 
         }
 
+        Spacer(modifier = Modifier.height(16.dp))
+
+
+
+
         Button(
             modifier = Modifier.fillMaxWidth(),
-            onClick = { }
+            onClick = {
+
+                android.widget.Toast
+                    .makeText(
+                        context,
+                        "Botón pulsado",
+                        android.widget.Toast.LENGTH_SHORT
+                    )
+                    .show()
+
+                CameraPreview.takePhoto(context) { photoPath ->
+
+                    if (firstPhotoPath == null) {
+
+                        firstPhotoPath = photoPath
+                        previewPhotoPath = photoPath
+                    } else {
+
+                        secondPhotoPath = photoPath
+                        previewPhotoPath = photoPath
+                    }
+
+                }
+
+            }
         ) {
             Text("Tomar fotografía")
         }
