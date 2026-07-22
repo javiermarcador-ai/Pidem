@@ -4,6 +4,8 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import es.fotoindex.app.data.ReviewData
+
 
 @Composable
 fun AppNavigation() {
@@ -41,7 +43,43 @@ fun AppNavigation() {
         }
 
         composable(AppScreen.Camera.route) {
-            CameraScreen()
+            CameraScreen(navController)
+        }
+
+        composable(AppScreen.Review.route) {
+
+            ReviewScreen(
+
+                ocrText = ReviewData.session?.let {
+
+                    buildString {
+
+                        append(it.firstOcrText)
+
+                        if (
+                            it.firstOcrText.isNotBlank() &&
+                            it.secondOcrText.isNotBlank()
+                        ) {
+                            append("\n\n")
+                        }
+
+                        append(it.secondOcrText)
+
+                    }
+
+                } ?: "",
+
+                onSave = {
+
+                    navController.popBackStack(
+                        AppScreen.Home.route,
+                        false
+                    )
+
+                }
+
+            )
+
         }
 
         composable(AppScreen.Detail.route) {

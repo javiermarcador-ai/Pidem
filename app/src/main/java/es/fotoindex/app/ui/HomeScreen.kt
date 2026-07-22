@@ -14,6 +14,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import es.fotoindex.app.viewmodel.PhotoViewModel
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.runtime.LaunchedEffect
 
 
 @Composable
@@ -24,6 +31,13 @@ fun HomeScreen(
     onImportClick: () -> Unit,
     onSettingsClick: () -> Unit
 ) {
+
+    val photoViewModel: PhotoViewModel = viewModel()
+
+    LaunchedEffect(Unit) {
+        photoViewModel.loadPhotos()
+    }
+
 
     Column(
         modifier = Modifier
@@ -86,6 +100,40 @@ fun HomeScreen(
             onClick = onSettingsClick
         ) {
             Text("⚙ Ajustes")
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = "Últimas capturas",
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        LazyColumn(
+            modifier = Modifier.weight(1f)
+        ) {
+
+            items(photoViewModel.photos) { photo ->
+
+                AsyncImage(
+                    model = photo.firstPhoto,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp),
+                    contentScale = ContentScale.Crop
+                )
+
+                Text(
+                    text = photo.ocrText.take(150)
+                )
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+            }
+
         }
     }
 }

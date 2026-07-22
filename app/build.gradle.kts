@@ -47,6 +47,8 @@ android {
 
 dependencies {
 
+    implementation(libs.mlkit.text.recognition)
+
     implementation(platform(libs.androidx.compose.bom))
 
     implementation(libs.androidx.core.ktx)

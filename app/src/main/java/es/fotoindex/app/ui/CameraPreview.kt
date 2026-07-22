@@ -83,13 +83,28 @@ object CameraPreview {
                 override fun onImageSaved(
                     outputFileResults: ImageCapture.OutputFileResults
                 ) {
+
+                    android.widget.Toast.makeText(
+                        context,
+                        "Foto guardada",
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+
                     onPhotoSaved(photoFile.absolutePath)
                 }
 
                 override fun onError(
                     exception: ImageCaptureException
                 ) {
+
+                    android.widget.Toast.makeText(
+                        context,
+                        exception.message ?: "Error desconocido",
+                        android.widget.Toast.LENGTH_LONG
+                    ).show()
+
                     exception.printStackTrace()
+
                 }
             }
         )
