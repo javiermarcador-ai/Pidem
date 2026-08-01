@@ -42,6 +42,18 @@ class PhotoViewModel(application: Application): AndroidViewModel(application) {
 
     }
 
+    fun deletePhoto(id: Long) {
+
+        viewModelScope.launch {
+
+            repository.delete(id)
+
+            loadPhotos()
+
+        }
+
+    }
+
     fun savePhoto(
 
         firstPhoto: String,
@@ -91,6 +103,30 @@ class PhotoViewModel(application: Application): AndroidViewModel(application) {
 
 
 
+
+        }
+
+    }
+
+    fun search(text: String) {
+
+        viewModelScope.launch {
+
+            photos.clear()
+
+            if (text.isBlank()) {
+
+                photos.addAll(
+                    repository.getAll()
+                )
+
+            } else {
+
+                photos.addAll(
+                    repository.search(text)
+                )
+
+            }
 
         }
 

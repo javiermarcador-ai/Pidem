@@ -76,6 +76,8 @@ dependencies {
     implementation(libs.androidx.camera.view)
 
     implementation(libs.mlkit.text.recognition)
+    implementation("androidx.compose.material:material-icons-extended")
+    
 
     testImplementation(libs.junit)
 
@@ -86,4 +88,6 @@ dependencies {
 
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+
+
 }

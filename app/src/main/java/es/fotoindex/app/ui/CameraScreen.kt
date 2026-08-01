@@ -19,9 +19,10 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil.compose.AsyncImage
-import es.fotoindex.app.ocr.OcrManager
 import es.fotoindex.app.data.ReviewData
 import es.fotoindex.app.model.CaptureSession
+import es.fotoindex.app.crop.CropManager
+
 
 @Composable
 fun CameraScreen(navController: androidx.navigation.NavHostController) {
@@ -177,80 +178,38 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
                 modifier = Modifier.fillMaxWidth(),
                 onClick = {
 
-                    if (session.reviewingFirstPhoto) {
+                    CropManager.cropPhoto(
 
-                        session = session.copy(
-                            firstPhotoPath = session.previewPhotoPath
-                        )
+                        context = context,
 
-                        OcrManager.extractText(
+                        photoPath = session.previewPhotoPath!!
 
-                            context = context,
+                    ) { result ->
 
-                            imagePath = session.previewPhotoPath!!,
+                        if (session.reviewingFirstPhoto) {
 
-                            onSuccess = { text ->
+                            session = session.copy(
+                                firstPhotoPath = result.imagePath,
+                                previewPhotoPath = null,
+                                reviewingPhoto = false,
+                                showSecondPhotoDialog = true
+                            )
 
-                                session = session.copy(
-                                    firstOcrText = text,
-                                    showSecondPhotoDialog = true
-                                )
+                        } else {
 
-                            },
+                            session = session.copy(
+                                secondPhotoPath = result.imagePath,
+                                previewPhotoPath = null,
+                                reviewingPhoto = false
+                            )
 
-                            onError = {
+                            ReviewData.session = session.copy()
 
-                                session = session.copy(
-                                    showSecondPhotoDialog = true
-                                )
+                            navController.navigate(AppScreen.Review.route)
 
-                            }
+                        }
 
-                        )
-
-                    } else {
-
-                        session = session.copy(
-                            secondPhotoPath = session.previewPhotoPath
-                        )
-
-
-                        val photoToProcess = session.previewPhotoPath!!
-
-                        OcrManager.extractText(
-
-                            context = context,
-
-                            imagePath = photoToProcess,
-
-                            onSuccess = { text ->
-
-                                session = session.copy(
-                                    secondOcrText = text
-                                )
-
-                                ReviewData.session = session.copy()
-
-                                navController.navigate(AppScreen.Review.route)
-
-                            },
-
-                            onError = {
-
-                                android.widget.Toast
-                                    .makeText(
-                                        context,
-                                        "Error al realizar OCR",
-                                        android.widget.Toast.LENGTH_SHORT
-                                    )
-                                    .show()
-
-                            }
-
-                        )
                     }
-                    session = session.copy(previewPhotoPath = null)
-                    session = session.copy(reviewingPhoto = false)
 
                 }
             ) {

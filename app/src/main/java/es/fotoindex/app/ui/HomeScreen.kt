@@ -72,7 +72,7 @@ fun HomeScreen(
             modifier = Modifier.fillMaxWidth(),
             onClick = onSearchClick
         ) {
-            Text("🔍 Buscar")
+            Text("📚 Documentos")
         }
 
         Spacer(modifier = Modifier.height(12.dp))

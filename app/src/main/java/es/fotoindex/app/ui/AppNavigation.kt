@@ -82,8 +82,33 @@ fun AppNavigation() {
 
         }
 
+
         composable(AppScreen.Detail.route) {
-            DetailScreen()
+
+            DetailScreen(
+
+                onOpenDocument = { id ->
+
+                    navController.navigate(AppScreen.Document.route)
+
+                }
+
+            )
+
+        }
+
+        composable(AppScreen.Document.route) {
+
+            DocumentScreen(
+
+                onBack = {
+
+                    navController.popBackStack()
+
+                }
+
+            )
+
         }
 
         composable(AppScreen.Settings.route) {

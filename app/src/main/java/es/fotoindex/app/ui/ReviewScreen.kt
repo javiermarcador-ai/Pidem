@@ -17,6 +17,7 @@ import es.fotoindex.app.data.ReviewData
 import androidx.lifecycle.viewmodel.compose.viewModel
 import es.fotoindex.app.viewmodel.PhotoViewModel
 import androidx.compose.foundation.layout.systemBarsPadding
+import es.fotoindex.app.ocr.OcrPipeline
 
 @Composable
 fun ReviewScreen(
@@ -134,6 +135,10 @@ fun ReviewScreen(
                     additionalText = additionalText
 
                 )
+
+                ReviewData.session = null
+
+                photoViewModel.loadPhotos()
 
                 onSave(additionalText)
 
