@@ -1,6 +1,12 @@
 package es.fotoindex.app.crop
 
 import android.content.Context
+import android.net.Uri
+import com.canhub.cropper.CropImage
+import com.canhub.cropper.CropImageContract
+import com.canhub.cropper.CropImageContractOptions
+import com.canhub.cropper.CropImageOptions
+
 
 object CropManager {
 
@@ -8,7 +14,7 @@ object CropManager {
 
         context: Context,
 
-        photoPath: String,
+        request: CropRequest,
 
         onResult: (CropResult) -> Unit
 
@@ -19,11 +25,9 @@ object CropManager {
 
         onResult(
 
-            CropResult(
+            CropResult.Accepted(
 
-                imagePath = photoPath,
-
-                accepted = true
+                imagePath = request.imagePath
 
             )
 

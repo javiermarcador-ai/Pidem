@@ -1,9 +1,13 @@
 package es.fotoindex.app.crop
 
-data class CropResult(
+sealed class CropResult {
 
-    val imagePath: String,
+    data class Accepted(
 
-    val accepted: Boolean
+        val imagePath: String
 
-)
+    ) : CropResult()
+
+    data object Cancelled : CropResult()
+
+}

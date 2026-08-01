@@ -13,6 +13,8 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Locale
 import androidx.camera.core.ImageCaptureException
+import android.net.Uri
+import java.io.FileOutputStream
 
 object CameraPreview {
 
@@ -54,6 +56,39 @@ object CameraPreview {
 
         }, ContextCompat.getMainExecutor(context))
     }
+
+    fun copyGalleryImage(
+
+        context: Context,
+
+        uri: Uri,
+
+        onCopied: (String) -> Unit
+
+    ) {
+
+        val input = context.contentResolver.openInputStream(uri) ?: return
+
+        val file = File(
+
+            context.cacheDir,
+
+            "gallery_${System.currentTimeMillis()}.jpg"
+
+        )
+
+        val output = FileOutputStream(file)
+
+        input.copyTo(output)
+
+        input.close()
+
+        output.close()
+
+        onCopied(file.absolutePath)
+
+    }
+
 
     fun takePhoto(
         context: Context,

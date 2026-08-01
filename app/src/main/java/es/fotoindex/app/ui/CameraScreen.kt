@@ -22,12 +22,17 @@ import coil.compose.AsyncImage
 import es.fotoindex.app.data.ReviewData
 import es.fotoindex.app.model.CaptureSession
 import es.fotoindex.app.crop.CropManager
-
+import es.fotoindex.app.crop.CropResult
+import es.fotoindex.app.crop.CropRequest
+import android.net.Uri
+import androidx.activity.result.contract.ActivityResultContracts.GetContent
 
 @Composable
 fun CameraScreen(navController: androidx.navigation.NavHostController) {
 
     val context = LocalContext.current
+
+    var session by remember {mutableStateOf(CaptureSession())  }
 
     var hasCameraPermission by remember {
         mutableStateOf(
@@ -45,13 +50,35 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
             hasCameraPermission = granted
         }
 
+    val galleryLauncher =
+        rememberLauncherForActivityResult(
+            GetContent()
+        ) { uri: Uri? ->
+
+            if (uri != null) {
+
+                CameraPreview.copyGalleryImage(
+                    context = context,
+                    uri = uri
+                ) { imagePath ->
+
+                    session = session.copy(
+                        previewPhotoPath = imagePath,
+                        reviewingPhoto = true
+                    )
+
+                }
+
+            }
+
+        }
+
+
     LaunchedEffect(Unit) {
         if (!hasCameraPermission) {
             permissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
-
-    var session by remember {mutableStateOf(CaptureSession())  }
 
     Column(
         modifier = Modifier
@@ -182,30 +209,63 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
 
                         context = context,
 
-                        photoPath = session.previewPhotoPath!!
+                        request = CropRequest(
+
+                            imagePath = session.previewPhotoPath!!
+
+                        )
 
                     ) { result ->
 
-                        if (session.reviewingFirstPhoto) {
+                        when (result) {
 
-                            session = session.copy(
-                                firstPhotoPath = result.imagePath,
-                                previewPhotoPath = null,
-                                reviewingPhoto = false,
-                                showSecondPhotoDialog = true
-                            )
+                            is CropResult.Accepted -> {
 
-                        } else {
+                                if (session.reviewingFirstPhoto) {
 
-                            session = session.copy(
-                                secondPhotoPath = result.imagePath,
-                                previewPhotoPath = null,
-                                reviewingPhoto = false
-                            )
+                                    session = session.copy(
 
-                            ReviewData.session = session.copy()
+                                        firstPhotoPath = result.imagePath,
 
-                            navController.navigate(AppScreen.Review.route)
+                                        previewPhotoPath = null,
+
+                                        reviewingPhoto = false,
+
+                                        showSecondPhotoDialog = true
+
+                                    )
+
+                                } else {
+
+                                    session = session.copy(
+
+                                        secondPhotoPath = result.imagePath,
+
+                                        previewPhotoPath = null,
+
+                                        reviewingPhoto = false
+
+                                    )
+
+                                    ReviewData.session = session.copy()
+
+                                    navController.navigate(AppScreen.Review.route)
+
+                                }
+
+                            }
+
+                            CropResult.Cancelled -> {
+
+                                session = session.copy(
+
+                                    previewPhotoPath = null,
+
+                                    reviewingPhoto = false
+
+                                )
+
+                            }
 
                         }
 

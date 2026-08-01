@@ -32,12 +32,12 @@ fun AppNavigation() {
                     navController.navigate(AppScreen.Settings.route)
                 },
 
-                onImportClick = {
+                onSettingsClick = {
                     navController.navigate(AppScreen.Settings.route)
                 },
 
-                onSettingsClick = {
-                    navController.navigate(AppScreen.Settings.route)
+                onGalleryClick = {
+                    navController.navigate(AppScreen.Gallery.route)
                 }
             )
         }
@@ -83,6 +83,7 @@ fun AppNavigation() {
         }
 
 
+
         composable(AppScreen.Detail.route) {
 
             DetailScreen(
@@ -114,5 +115,13 @@ fun AppNavigation() {
         composable(AppScreen.Settings.route) {
             SettingsScreen()
         }
+
+        composable(AppScreen.Gallery.route) {
+            GalleryScreen(navController)
+
+
+        }
+
+
     }
 }

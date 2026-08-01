@@ -77,7 +77,8 @@ dependencies {
 
     implementation(libs.mlkit.text.recognition)
     implementation("androidx.compose.material:material-icons-extended")
-    
+    implementation("com.vanniktech:android-image-cropper:4.6.0")
+
 
     testImplementation(libs.junit)
 

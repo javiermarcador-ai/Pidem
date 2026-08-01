@@ -24,12 +24,15 @@ import androidx.compose.runtime.LaunchedEffect
 
 
 @Composable
+
 fun HomeScreen(
+
     onCaptureClick: () -> Unit,
+    onGalleryClick: () -> Unit,
     onSearchClick: () -> Unit,
     onExportClick: () -> Unit,
-    onImportClick: () -> Unit,
     onSettingsClick: () -> Unit
+
 ) {
 
     val photoViewModel: PhotoViewModel = viewModel()
@@ -66,6 +69,13 @@ fun HomeScreen(
             Text("📷 Capturar")
         }
 
+        Button(
+            modifier = Modifier.fillMaxWidth(),
+            onClick = onGalleryClick
+        ) {
+            Text("🖼 Explorar galería")
+        }
+
         Spacer(modifier = Modifier.height(12.dp))
 
         Button(
@@ -81,16 +91,7 @@ fun HomeScreen(
             modifier = Modifier.fillMaxWidth(),
             onClick = onExportClick
         ) {
-            Text("📤 Exportar")
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Button(
-            modifier = Modifier.fillMaxWidth(),
-            onClick = onImportClick
-        ) {
-            Text("📥 Importar")
+            Text("📤 Exportar /📥 Importar")
         }
 
         Spacer(modifier = Modifier.height(12.dp))
