@@ -60,7 +60,7 @@ fun HomeScreen(
             style = MaterialTheme.typography.bodyMedium
         )
 
-        Spacer(modifier = Modifier.height(40.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
         Button(
             modifier = Modifier.fillMaxWidth(),
@@ -76,7 +76,7 @@ fun HomeScreen(
             Text("🖼 Explorar galería")
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
         Button(
             modifier = Modifier.fillMaxWidth(),
@@ -85,7 +85,7 @@ fun HomeScreen(
             Text("📚 Documentos")
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
         Button(
             modifier = Modifier.fillMaxWidth(),
@@ -94,7 +94,7 @@ fun HomeScreen(
             Text("📤 Exportar /📥 Importar")
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
         Button(
             modifier = Modifier.fillMaxWidth(),
@@ -103,14 +103,14 @@ fun HomeScreen(
             Text("⚙ Ajustes")
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(18.dp))
 
         Text(
             text = "Últimas capturas",
             style = MaterialTheme.typography.titleMedium
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
         LazyColumn(
             modifier = Modifier.weight(1f)

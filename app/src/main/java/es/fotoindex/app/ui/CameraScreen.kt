@@ -26,6 +26,9 @@ import es.fotoindex.app.crop.CropResult
 import es.fotoindex.app.crop.CropRequest
 import android.net.Uri
 import androidx.activity.result.contract.ActivityResultContracts.GetContent
+import es.fotoindex.app.data.GalleryData
+import es.fotoindex.app.model.CaptureSource
+
 
 @Composable
 fun CameraScreen(navController: androidx.navigation.NavHostController) {
@@ -63,10 +66,14 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
                 ) { imagePath ->
 
                     session = session.copy(
-                        previewPhotoPath = imagePath,
-                        reviewingPhoto = true
-                    )
 
+                        previewPhotoPath = imagePath,
+
+                        reviewingPhoto = true,
+
+                        source = CaptureSource.GALLERY
+
+                    )
                 }
 
             }
@@ -79,6 +86,19 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
             permissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
+
+
+    LaunchedEffect(Unit) {
+
+        if (es.fotoindex.app.image.ImageProvider.source ==
+            es.fotoindex.app.image.ImageSource.GALLERY) {
+
+            galleryLauncher.launch("image/*")
+
+        }
+
+    }
+
 
     Column(
         modifier = Modifier
@@ -116,16 +136,21 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
 
         val lifecycleOwner = LocalLifecycleOwner.current
 
-        DisposableEffect(Unit) {
+        if (es.fotoindex.app.image.ImageProvider.source ==
+            es.fotoindex.app.image.ImageSource.CAMERA) {
 
-            CameraPreview.startCamera(
-                context = context,
-                lifecycleOwner = lifecycleOwner,
-                previewView = previewView
-            )
+            DisposableEffect(Unit) {
 
-            onDispose { }
+                CameraPreview.startCamera(
+                    context = context,
+                    lifecycleOwner = lifecycleOwner,
+                    previewView = previewView
+                )
+
+                onDispose { }
+            }
         }
+
 
         Box(
             modifier = Modifier
@@ -304,10 +329,22 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
                 Button(
                     onClick = {
 
-                        session = session.copy(showSecondPhotoDialog = false)
-                        session = session.copy(reviewingFirstPhoto = false)
+                        session = session.copy(
+
+                            showSecondPhotoDialog = false,
+
+                            reviewingFirstPhoto = false
+
+                        )
+
+                        es.fotoindex.app.image.ImageProvider.source =
+                            es.fotoindex.app.image.ImageSource.GALLERY
+
+                        galleryLauncher.launch("image/*")
+
 
                     }
+
                 ) {
                     Text("Sí")
                 }

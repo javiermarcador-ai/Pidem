@@ -1,4 +1,7 @@
+
 package es.fotoindex.app.model
+
+import es.fotoindex.app.model.CaptureSource
 
 data class CaptureSession(
 
@@ -12,6 +15,8 @@ data class CaptureSession(
     val reviewingPhoto: Boolean = false,
     val reviewingFirstPhoto: Boolean = true,
 
-    val showSecondPhotoDialog: Boolean = false
+    val showSecondPhotoDialog: Boolean = false,
+
+    val source: CaptureSource = CaptureSource.CAMERA
 
 )

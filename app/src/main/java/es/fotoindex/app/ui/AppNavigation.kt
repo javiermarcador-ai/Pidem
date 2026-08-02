@@ -21,7 +21,12 @@ fun AppNavigation() {
 
             HomeScreen(
                 onCaptureClick = {
+
+                    es.fotoindex.app.image.ImageProvider.source =
+                        es.fotoindex.app.image.ImageSource.CAMERA
+
                     navController.navigate(AppScreen.Camera.route)
+
                 },
 
                 onSearchClick = {
@@ -37,13 +42,27 @@ fun AppNavigation() {
                 },
 
                 onGalleryClick = {
-                    navController.navigate(AppScreen.Gallery.route)
+
+                    es.fotoindex.app.image.ImageProvider.source =
+                        es.fotoindex.app.image.ImageSource.GALLERY
+
+                    navController.navigate(AppScreen.Camera.route)
+
                 }
             )
         }
 
         composable(AppScreen.Camera.route) {
             CameraScreen(navController)
+        }
+
+        composable(AppScreen.Gallery.route) {
+            // Temporal.
+            // En el siguiente paso esta pantalla abrirá directamente
+            // el selector de imágenes de Android.
+
+            GalleryScreen(navController)
+
         }
 
         composable(AppScreen.Review.route) {
@@ -116,11 +135,6 @@ fun AppNavigation() {
             SettingsScreen()
         }
 
-        composable(AppScreen.Gallery.route) {
-            GalleryScreen(navController)
-
-
-        }
 
 
     }
