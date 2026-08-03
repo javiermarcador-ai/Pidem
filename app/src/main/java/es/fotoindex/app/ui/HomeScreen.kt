@@ -103,7 +103,7 @@ fun HomeScreen(
             Text("⚙ Ajustes")
         }
 
-        Spacer(modifier = Modifier.height(18.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         Text(
             text = "Últimas capturas",

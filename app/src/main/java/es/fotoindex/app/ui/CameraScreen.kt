@@ -80,6 +80,7 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
         }
 
 
+
     LaunchedEffect(Unit) {
         if (!hasCameraPermission) {
             permissionLauncher.launch(Manifest.permission.CAMERA)

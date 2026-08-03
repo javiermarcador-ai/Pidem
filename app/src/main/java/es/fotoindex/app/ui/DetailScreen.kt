@@ -26,6 +26,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.foundation.layout.systemBarsPadding
 
 
 @Composable
@@ -68,6 +69,7 @@ fun DetailScreen(onOpenDocument: (Long) -> Unit) {
 
             modifier = Modifier
                 .fillMaxWidth()
+                .systemBarsPadding()
                 .padding(8.dp),
 
             label = {

@@ -18,6 +18,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import es.fotoindex.app.viewmodel.PhotoViewModel
 import androidx.compose.foundation.layout.systemBarsPadding
 import es.fotoindex.app.ocr.OcrPipeline
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.material3.CircularProgressIndicator
+import es.fotoindex.app.ocr.OcrCleaner
+
 
 @Composable
 fun ReviewScreen(
@@ -33,9 +38,94 @@ fun ReviewScreen(
         mutableStateOf("")
     }
 
+    var recognizedText by remember {
+        mutableStateOf("")
+    }
+
+    var ocrFinished by remember {
+        mutableStateOf(false)
+    }
+
+    var ocrRunning by remember {
+        mutableStateOf(false)
+    }
 
     val photoViewModel: PhotoViewModel = viewModel()
     val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+
+        if (ocrRunning) return@LaunchedEffect
+
+        ocrRunning = true
+
+        val session = ReviewData.session ?: return@LaunchedEffect
+
+        val builder = StringBuilder()
+
+        OcrPipeline.process(
+
+            context = context,
+
+            imagePath = session.firstPhotoPath!!
+
+            ,
+
+            onSuccess = { text1 ->
+
+                builder.append(text1)
+
+                session.secondPhotoPath?.let { second ->
+
+                    OcrPipeline.process(
+
+                        context = context,
+
+                        imagePath = second,
+
+                        onSuccess = { text2 ->
+
+                            if (builder.isNotEmpty() && text2.isNotBlank()) {
+
+                                builder.append("\n\n")
+
+                            }
+
+                            builder.append(text2)
+
+                            recognizedText = OcrCleaner.clean(builder.toString())
+                            ocrFinished = true
+
+                        },
+
+                        onError = {
+
+                            recognizedText = OcrCleaner.clean(builder.toString())
+                            ocrFinished = true
+
+                        }
+
+                    )
+
+                } ?: run {
+
+                    recognizedText = OcrCleaner.clean(builder.toString())
+                    ocrFinished = true
+
+                }
+
+            },
+
+            onError = {
+
+                recognizedText = "No se pudo reconocer el texto."
+                ocrFinished = true
+
+            }
+
+        )
+
+    }
 
     Column(
 
@@ -85,29 +175,6 @@ fun ReviewScreen(
             Spacer(Modifier.height(16.dp))
         }
 
-
-        Spacer(Modifier.height(16.dp))
-
-        Text(
-            text = ocrText,
-            style = MaterialTheme.typography.bodyMedium
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        OutlinedTextField(
-
-            value = additionalText,
-
-                    onValueChange = {
-                additionalText = it
-            },
-
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-        )
-
         Spacer(Modifier.height(24.dp))
 
         Button(
@@ -130,7 +197,7 @@ fun ReviewScreen(
 
                     secondPhoto = session.secondPhotoPath,
 
-                    ocrText = ocrText,
+                    ocrText = recognizedText,
 
                     additionalText = additionalText
 
@@ -149,6 +216,44 @@ fun ReviewScreen(
             Text("Guardar")
 
         }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Spacer(Modifier.height(16.dp))
+
+        if (!ocrFinished) {
+
+            CircularProgressIndicator()
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text("Analizando imagen...")
+
+        } else {
+
+            Text(
+                text = recognizedText,
+                style = MaterialTheme.typography.bodyMedium
+            )
+
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+
+            value = additionalText,
+
+                    onValueChange = {
+                additionalText = it
+            },
+
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+        )
+
+
 
     }
 
