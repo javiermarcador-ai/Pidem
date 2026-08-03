@@ -26,7 +26,6 @@ import es.fotoindex.app.crop.CropResult
 import es.fotoindex.app.crop.CropRequest
 import android.net.Uri
 import androidx.activity.result.contract.ActivityResultContracts.GetContent
-import es.fotoindex.app.data.GalleryData
 import es.fotoindex.app.model.CaptureSource
 
 

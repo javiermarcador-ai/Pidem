@@ -56,15 +56,6 @@ fun AppNavigation() {
             CameraScreen(navController)
         }
 
-        composable(AppScreen.Gallery.route) {
-            // Temporal.
-            // En el siguiente paso esta pantalla abrirá directamente
-            // el selector de imágenes de Android.
-
-            GalleryScreen(navController)
-
-        }
-
         composable(AppScreen.Review.route) {
 
             ReviewScreen(
