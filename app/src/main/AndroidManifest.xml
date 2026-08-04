@@ -15,9 +15,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.FotoIndex">
 
-        <activity
-            android:name=".crop.CropActivity"
-            android:theme="@style/Theme.FotoIndex"/>
+
 
         <activity
 

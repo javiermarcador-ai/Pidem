@@ -21,12 +21,11 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil.compose.AsyncImage
 import es.fotoindex.app.data.ReviewData
 import es.fotoindex.app.model.CaptureSession
-import es.fotoindex.app.crop.CropManager
-import es.fotoindex.app.crop.CropResult
-import es.fotoindex.app.crop.CropRequest
 import android.net.Uri
 import androidx.activity.result.contract.ActivityResultContracts.GetContent
 import es.fotoindex.app.model.CaptureSource
+import es.fotoindex.app.ocr.OcrPipeline
+
 
 
 @Composable
@@ -64,13 +63,43 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
                     uri = uri
                 ) { imagePath ->
 
-                    session = session.copy(
+                    OcrPipeline.process(
 
-                        previewPhotoPath = imagePath,
+                        context = context,
 
-                        reviewingPhoto = true,
+                        imagePath = imagePath,
 
-                        source = CaptureSource.GALLERY
+                        onSuccess = { text ->
+
+                            session = session.copy(
+
+                                previewPhotoPath = imagePath,
+
+                                reviewingPhoto = true,
+
+                                source = CaptureSource.GALLERY,
+
+                                ocrText = text
+
+                            )
+
+                        },
+
+                        onError = {
+
+                            session = session.copy(
+
+                                previewPhotoPath = imagePath,
+
+                                reviewingPhoto = true,
+
+                                source = CaptureSource.GALLERY,
+
+                                ocrText = ""
+
+                            )
+
+                        }
 
                     )
                 }
@@ -98,6 +127,8 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
         }
 
     }
+
+
 
 
     Column(
@@ -167,13 +198,10 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
 
             } else {
 
-                AsyncImage(
-                    model = session.previewPhotoPath,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .fillMaxSize(0.75f)
-                        .align(Alignment.Center),
-                    contentScale = ContentScale.Fit
+                CropImageView(
+
+                    imagePath = session.previewPhotoPath!!
+
                 )
 
             }
@@ -190,9 +218,40 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
 
                     CameraPreview.takePhoto(context) { photoPath ->
 
-                        session = session.copy(
-                            previewPhotoPath = photoPath,
-                            reviewingPhoto = true
+                        OcrPipeline.process(
+
+                            context = context,
+
+                            imagePath = photoPath,
+
+                            onSuccess = { text ->
+
+                                session = session.copy(
+
+                                    previewPhotoPath = photoPath,
+
+                                    reviewingPhoto = true,
+
+                                    ocrText = text
+
+                                )
+
+                            },
+
+                            onError = {
+
+                                session = session.copy(
+
+                                    previewPhotoPath = photoPath,
+
+                                    reviewingPhoto = true,
+
+                                    ocrText = ""
+
+                                )
+
+                            }
+
                         )
 
                     }
@@ -230,77 +289,43 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
                 modifier = Modifier.fillMaxWidth(),
                 onClick = {
 
-                    CropManager.cropPhoto(
+                    if (session.reviewingFirstPhoto) {
 
-                        context = context,
+                        session = session.copy(
 
-                        request = CropRequest(
+                            firstPhotoPath = session.previewPhotoPath,
 
-                            imagePath = session.previewPhotoPath!!
+                            previewPhotoPath = null,
+
+                            reviewingPhoto = false,
+
+                            showSecondPhotoDialog = true
 
                         )
 
-                    ) { result ->
+                    } else {
 
-                        when (result) {
+                        session = session.copy(
 
-                            is CropResult.Accepted -> {
+                            secondPhotoPath = session.previewPhotoPath,
 
-                                if (session.reviewingFirstPhoto) {
+                            previewPhotoPath = null,
 
-                                    session = session.copy(
+                            reviewingPhoto = false
 
-                                        firstPhotoPath = result.imagePath,
+                        )
 
-                                        previewPhotoPath = null,
+                        ReviewData.session = session.copy(
+                            ocrText = session.ocrText
+                        )
 
-                                        reviewingPhoto = false,
-
-                                        showSecondPhotoDialog = true
-
-                                    )
-
-                                } else {
-
-                                    session = session.copy(
-
-                                        secondPhotoPath = result.imagePath,
-
-                                        previewPhotoPath = null,
-
-                                        reviewingPhoto = false
-
-                                    )
-
-                                    ReviewData.session = session.copy()
-
-                                    navController.navigate(AppScreen.Review.route)
-
-                                }
-
-                            }
-
-                            CropResult.Cancelled -> {
-
-                                session = session.copy(
-
-                                    previewPhotoPath = null,
-
-                                    reviewingPhoto = false
-
-                                )
-
-                            }
-
-                        }
+                        navController.navigate(AppScreen.Review.route)
 
                     }
 
                 }
             ) {
-
                 Text("✅ Aceptar fotografía")
-
             }
 
         }
@@ -357,7 +382,9 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
                     onClick = {
                         session = session.copy(showSecondPhotoDialog = false)
 
-                        ReviewData.session = session.copy()
+                        ReviewData.session = session.copy(
+                            ocrText = session.ocrText
+                        )
 
                         navController.navigate(AppScreen.Review.route)
 

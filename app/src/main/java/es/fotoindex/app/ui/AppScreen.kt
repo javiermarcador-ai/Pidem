@@ -13,4 +13,6 @@ sealed class AppScreen(val route: String) {
     data object Document : AppScreen("document")
 
     data object Settings : AppScreen("settings")
+
+
 }

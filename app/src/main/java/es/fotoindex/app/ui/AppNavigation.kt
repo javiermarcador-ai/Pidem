@@ -56,28 +56,11 @@ fun AppNavigation() {
             CameraScreen(navController)
         }
 
+
+
         composable(AppScreen.Review.route) {
 
             ReviewScreen(
-
-                ocrText = ReviewData.session?.let {
-
-                    buildString {
-
-                        append(it.firstOcrText)
-
-                        if (
-                            it.firstOcrText.isNotBlank() &&
-                            it.secondOcrText.isNotBlank()
-                        ) {
-                            append("\n\n")
-                        }
-
-                        append(it.secondOcrText)
-
-                    }
-
-                } ?: "",
 
                 onSave = {
 

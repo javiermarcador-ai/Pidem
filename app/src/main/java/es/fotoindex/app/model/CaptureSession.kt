@@ -17,6 +17,8 @@ data class CaptureSession(
 
     val showSecondPhotoDialog: Boolean = false,
 
-    val source: CaptureSource = CaptureSource.CAMERA
+    val source: CaptureSource = CaptureSource.CAMERA,
+
+    val ocrText: String = ""
 
 )
