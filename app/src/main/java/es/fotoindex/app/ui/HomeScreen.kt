@@ -63,6 +63,8 @@ fun HomeScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         Button(
+            // CaptureSessionState.firstOcrText.let {},
+
             modifier = Modifier.fillMaxWidth(),
             onClick = onCaptureClick
         ) {

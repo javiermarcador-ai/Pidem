@@ -17,19 +17,28 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import kotlin.math.abs
+import android.graphics.Bitmap
+import android.graphics.Matrix
+import androidx.exifinterface.media.ExifInterface
+
 
 @Composable
 fun CropImageView(
 
-    imagePath: String
+    imagePath: String,
+
+    cropArea: CropArea
 
 ) {
 
     val bitmap = remember(imagePath) {
 
-        BitmapFactory.decodeFile(imagePath)
+        ImageCropper.loadBitmap(imagePath)
+
 
     }
+
+    CropBitmapState.bitmap = bitmap
 
     var canvasWidth by remember { mutableStateOf(0f) }
     var canvasHeight by remember { mutableStateOf(0f) }
@@ -115,19 +124,6 @@ fun CropImageView(
             modifier = Modifier.fillMaxSize()
         ) {
 
-            if (right < 0f)
-                right = imageRight
-
-            if (bottom < 0f)
-                bottom = imageBottom
-
-            if (left == 0f)
-                left = imageLeft
-
-            if (top == 0f)
-                top = imageTop
-
-
             canvasWidth = size.width
             canvasHeight = size.height
 
@@ -159,6 +155,14 @@ fun CropImageView(
 
             }
 
+            if (right < 0f) {
+
+                left = imageLeft
+                top = imageTop
+                right = imageRight
+                bottom = imageBottom
+
+            }
 
             drawRect(
 
@@ -211,6 +215,16 @@ fun CropImageView(
                 style = Stroke(width = 3.dp.toPx())
 
             )
+
+            cropArea.imageLeft = imageLeft
+            cropArea.imageTop = imageTop
+            cropArea.imageRight = imageRight
+            cropArea.imageBottom = imageBottom
+
+            cropArea.cropLeft = left
+            cropArea.cropTop = top
+            cropArea.cropRight = right
+            cropArea.cropBottom = bottom
 
         }
 

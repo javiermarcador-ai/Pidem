@@ -34,10 +34,7 @@ class PhotoViewModel(application: Application): AndroidViewModel(application) {
                 repository.getAll()
             )
 
-            android.util.Log.d(
-                "FotoIndex",
-                "Encontradas ${photos.size} fotografías"
-            )
+
         }
 
     }
@@ -82,22 +79,11 @@ class PhotoViewModel(application: Application): AndroidViewModel(application) {
 
             )
 
-            android.util.Log.d(
-                "FotoIndex",
-                "Guardando registro: $photo"
-            )
+
 
             repository.insert(photo)
 
-            android.util.Log.d(
-                "FotoIndex",
-                "Registro guardado correctamente"
-            )
 
-            android.util.Log.d(
-                "FotoIndex",
-                "Cargando fotografías..."
-            )
 
             loadPhotos()
 

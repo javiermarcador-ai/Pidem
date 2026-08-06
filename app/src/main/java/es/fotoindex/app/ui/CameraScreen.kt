@@ -12,20 +12,18 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import coil.compose.AsyncImage
 import es.fotoindex.app.data.ReviewData
 import es.fotoindex.app.model.CaptureSession
 import android.net.Uri
 import androidx.activity.result.contract.ActivityResultContracts.GetContent
 import es.fotoindex.app.model.CaptureSource
 import es.fotoindex.app.ocr.OcrPipeline
-
+import es.fotoindex.app.data.CaptureSessionState
 
 
 @Composable
@@ -34,6 +32,7 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
     val context = LocalContext.current
 
     var session by remember {mutableStateOf(CaptureSession())  }
+
 
     var hasCameraPermission by remember {
         mutableStateOf(
@@ -64,41 +63,39 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
                 ) { imagePath ->
 
                     OcrPipeline.process(
-
                         context = context,
-
                         imagePath = imagePath,
 
                         onSuccess = { text ->
 
+                            if (session.reviewingFirstPhoto) {
+                                session = session.copy(firstOcrText = text)
+
+                            } else {
+                                session = session.copy(secondOcrText = text)
+                            }
+
                             session = session.copy(
-
                                 previewPhotoPath = imagePath,
-
                                 reviewingPhoto = true,
-
-                                source = CaptureSource.GALLERY,
-
-                                ocrText = text
-
+                                source = CaptureSource.GALLERY
                             )
-
                         },
 
                         onError = {
 
+                            if (session.reviewingFirstPhoto) {
+                                session = session.copy(firstOcrText = "")
+
+                            } else {
+                                session = session.copy(secondOcrText = "")
+                            }
+
                             session = session.copy(
-
                                 previewPhotoPath = imagePath,
-
                                 reviewingPhoto = true,
-
-                                source = CaptureSource.GALLERY,
-
-                                ocrText = ""
-
+                                source = CaptureSource.GALLERY
                             )
-
                         }
 
                     )
@@ -111,6 +108,9 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
 
 
     LaunchedEffect(Unit) {
+
+        session = CaptureSession()
+
         if (!hasCameraPermission) {
             permissionLauncher.launch(Manifest.permission.CAMERA)
         }
@@ -118,6 +118,7 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
 
 
     LaunchedEffect(Unit) {
+
 
         if (es.fotoindex.app.image.ImageProvider.source ==
             es.fotoindex.app.image.ImageSource.GALLERY) {
@@ -200,7 +201,9 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
 
                 CropImageView(
 
-                    imagePath = session.previewPhotoPath!!
+                    imagePath = session.previewPhotoPath!!,
+
+                    cropArea = CropState.cropArea
 
                 )
 
@@ -216,6 +219,7 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
                 modifier = Modifier.fillMaxWidth(),
                 onClick = {
 
+
                     CameraPreview.takePhoto(context) { photoPath ->
 
                         OcrPipeline.process(
@@ -226,29 +230,55 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
 
                             onSuccess = { text ->
 
-                                session = session.copy(
+                                session = if (session.reviewingFirstPhoto) {
 
-                                    previewPhotoPath = photoPath,
+                                    session.copy(
 
-                                    reviewingPhoto = true,
+                                        previewPhotoPath = photoPath,
 
-                                    ocrText = text
+                                        reviewingPhoto = true,
 
-                                )
+                                        firstOcrText = text
+
+                                    )
+
+                                } else {
+
+                                    session.copy(
+
+                                        previewPhotoPath = photoPath,
+
+                                        reviewingPhoto = true,
+
+
+                                    )
+
+                                }
 
                             },
 
                             onError = {
 
-                                session = session.copy(
+                                session = if (session.reviewingFirstPhoto) {
 
-                                    previewPhotoPath = photoPath,
+                                    session.copy(
 
-                                    reviewingPhoto = true,
+                                        previewPhotoPath = photoPath,
 
-                                    ocrText = ""
+                                        reviewingPhoto = true,
 
-                                )
+                                        firstOcrText = ""
+
+                                    )
+
+                                } else {
+
+                                    session.copy(
+                                        previewPhotoPath = photoPath,
+                                        reviewingPhoto = true,
+                                    )
+
+                                }
 
                             }
 
@@ -289,11 +319,21 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
                 modifier = Modifier.fillMaxWidth(),
                 onClick = {
 
+                    val croppedPath = ImageCropper.processCrop(
+
+                        context = context,
+
+                        bitmap = CropBitmapState.bitmap!!,
+
+                        cropArea = CropState.cropArea
+
+                    )
+
                     if (session.reviewingFirstPhoto) {
 
                         session = session.copy(
 
-                            firstPhotoPath = session.previewPhotoPath,
+                            firstPhotoPath = croppedPath,
 
                             previewPhotoPath = null,
 
@@ -307,7 +347,7 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
 
                         session = session.copy(
 
-                            secondPhotoPath = session.previewPhotoPath,
+                            secondPhotoPath = croppedPath,
 
                             previewPhotoPath = null,
 
@@ -316,8 +356,21 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
                         )
 
                         ReviewData.session = session.copy(
-                            ocrText = session.ocrText
+
+                            ocrText = buildString {
+                                append(session.firstOcrText)
+                                if (session.secondOcrText.isNotBlank()) {
+                                    append("\n\n")
+                                    append(session.secondOcrText)
+                                }
+                            }
                         )
+
+                        /* android.util.Log.d(
+                            "FotoIndex",
+                            "Cargando fotografías..."
+                        )*/
+
 
                         navController.navigate(AppScreen.Review.route)
 
@@ -351,6 +404,7 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
 
             confirmButton = {
 
+
                 Button(
                     onClick = {
 
@@ -364,6 +418,7 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
 
                         es.fotoindex.app.image.ImageProvider.source =
                             es.fotoindex.app.image.ImageSource.GALLERY
+
 
                         galleryLauncher.launch("image/*")
 
@@ -383,7 +438,21 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
                         session = session.copy(showSecondPhotoDialog = false)
 
                         ReviewData.session = session.copy(
-                            ocrText = session.ocrText
+
+                            ocrText = buildString {
+
+                                append(session.firstOcrText)
+
+                                if (session.secondOcrText.isNotBlank()) {
+
+                                    append("\n\n")
+
+                                    append(session.secondOcrText)
+
+                                }
+
+                            }
+
                         )
 
                         navController.navigate(AppScreen.Review.route)

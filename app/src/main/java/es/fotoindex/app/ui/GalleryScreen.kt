@@ -58,7 +58,7 @@ fun GalleryScreen(
 
     LaunchedEffect(Unit) {
 
-        galleryLauncher.launch("image/*")
+         galleryLauncher.launch("image/*")
 
     }
 

@@ -22,11 +22,15 @@ import androidx.compose.runtime.setValue
 
 
 @Composable
+
+
 fun ReviewScreen(
 
     onSave: (String) -> Unit
 
 ) {
+
+
 
 
     var additionalText by remember {
@@ -36,6 +40,11 @@ fun ReviewScreen(
 
     val photoViewModel: PhotoViewModel = viewModel()
     val context = LocalContext.current
+
+
+    LaunchedEffect(Unit) {
+
+    }
 
 
     Column(
