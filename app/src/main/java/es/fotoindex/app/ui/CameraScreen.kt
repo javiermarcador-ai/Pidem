@@ -23,8 +23,6 @@ import android.net.Uri
 import androidx.activity.result.contract.ActivityResultContracts.GetContent
 import es.fotoindex.app.model.CaptureSource
 import es.fotoindex.app.ocr.OcrPipeline
-import es.fotoindex.app.data.CaptureSessionState
-
 
 @Composable
 fun CameraScreen(navController: androidx.navigation.NavHostController) {

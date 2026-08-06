@@ -19,6 +19,9 @@ import es.fotoindex.app.viewmodel.PhotoViewModel
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalFocusManager
 
 
 @Composable
@@ -40,10 +43,10 @@ fun ReviewScreen(
 
     val photoViewModel: PhotoViewModel = viewModel()
     val context = LocalContext.current
-
+    val focusRequester = remember { FocusRequester() }
 
     LaunchedEffect(Unit) {
-
+        focusRequester.requestFocus()
     }
 
 
@@ -52,14 +55,14 @@ fun ReviewScreen(
         modifier = Modifier
             .fillMaxSize()
             .systemBarsPadding()
+            .imePadding()
             .padding(16.dp)
             .verticalScroll(rememberScrollState())
-
     ) {
 
         Text(
 
-            text = "Texto reconocido",
+            text = "Revisión del documento",
 
             style = MaterialTheme.typography.headlineSmall
 
@@ -137,30 +140,45 @@ fun ReviewScreen(
 
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Spacer(Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = ReviewData.session?.ocrText ?: "",
-            style = MaterialTheme.typography.bodyMedium
+            text = "Notas",
+            style = MaterialTheme.typography.titleMedium
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(6.dp))
 
         OutlinedTextField(
 
             value = additionalText,
 
-                    onValueChange = {
+            onValueChange = {
                 additionalText = it
             },
 
+            label = {Text("Notas")},
+            placeholder = {Text("Escriba aquí sus observaciones...")},
+
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f)
+                .height(140.dp)
+                .focusRequester(focusRequester)
         )
 
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "OCR",
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        Text(
+            text = ReviewData.session?.ocrText ?: "",
+            style = MaterialTheme.typography.bodyMedium
+        )
 
 
     }

@@ -1,7 +1,6 @@
 
 package es.fotoindex.app.model
 
-import es.fotoindex.app.model.CaptureSource
 
 data class CaptureSession(
 

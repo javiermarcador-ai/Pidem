@@ -21,7 +21,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import es.fotoindex.app.viewmodel.PhotoViewModel
 import androidx.core.content.FileProvider
-import androidx.core.content.ContextCompat
 import java.io.File
 
 
