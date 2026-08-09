@@ -405,28 +405,18 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
 
                 Button(
                     onClick = {
-
                         session = session.copy(
-
                             showSecondPhotoDialog = false,
-
-                            reviewingFirstPhoto = false
-
+                            reviewingFirstPhoto = false,
+                            reviewingPhoto = false,
+                            previewPhotoPath = null
                         )
-
                         es.fotoindex.app.image.ImageProvider.source =
-                            es.fotoindex.app.image.ImageSource.GALLERY
-
-
-                        galleryLauncher.launch("image/*")
-
-
+                            es.fotoindex.app.image.ImageSource.CAMERA
                     }
-
                 ) {
                     Text("Sí")
                 }
-
             },
 
             dismissButton = {

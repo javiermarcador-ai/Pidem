@@ -5,7 +5,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import es.fotoindex.app.data.ReviewData
-
+import es.fotoindex.app.data.DetailState
 
 @Composable
 fun AppNavigation() {
@@ -30,6 +30,8 @@ fun AppNavigation() {
                 },
 
                 onSearchClick = {
+                    DetailState.searchText = ""
+                    DetailState.searchInNotes = true
                     navController.navigate(AppScreen.Detail.route)
                 },
 
@@ -42,12 +44,13 @@ fun AppNavigation() {
                 },
 
                 onGalleryClick = {
-
                     es.fotoindex.app.image.ImageProvider.source =
                         es.fotoindex.app.image.ImageSource.GALLERY
-
                     navController.navigate(AppScreen.Camera.route)
+                },
 
+                onOpenDocument = {
+                    navController.navigate(AppScreen.Document.route)
                 }
             )
         }

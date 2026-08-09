@@ -18,16 +18,37 @@ SELECT *
 FROM photos
 WHERE
 ocrText LIKE '%' || :text || '%'
+ORDER BY createdAt DESC
+""")
+    suspend fun search(text: String): List<PhotoRecord>
+
+    @Query("""
+SELECT *
+FROM photos
+WHERE
+ocrText LIKE '%' || :text || '%'
 OR
 additionalText LIKE '%' || :text || '%'
 ORDER BY createdAt DESC
 """)
-    suspend fun search(text: String): List<PhotoRecord>
+    suspend fun searchIncludingNotes(text: String): List<PhotoRecord>
 
 
 
     @Query("DELETE FROM photos WHERE id = :id")
     suspend fun delete(id: Long)
+
+    @Query("""
+UPDATE photos
+SET additionalText = :notes
+WHERE id = :id
+""")
+    suspend fun updateNotes(
+        id: Long,
+        notes: String
+    )
+
+
 
 
 }

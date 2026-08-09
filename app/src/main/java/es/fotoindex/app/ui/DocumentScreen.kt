@@ -22,6 +22,15 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import es.fotoindex.app.viewmodel.PhotoViewModel
 import androidx.core.content.FileProvider
 import java.io.File
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.foundation.clickable
 
 
 @Composable
@@ -34,6 +43,16 @@ fun DocumentScreen(
     val context = LocalContext.current
     val viewModel: PhotoViewModel = viewModel()
 
+    var notes by remember {
+        mutableStateOf(photo.additionalText)
+    }
+
+    val focusRequester = remember { FocusRequester() }
+
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
+
+    val coroutineScope = rememberCoroutineScope()
+
     var showDeleteDialog by remember {
 
         mutableStateOf(false)
@@ -44,24 +63,27 @@ fun DocumentScreen(
 
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
             .systemBarsPadding()
+            .imePadding()
+            .padding(16.dp)
             .verticalScroll(rememberScrollState())
+
 
     ) {
 
         AsyncImage(
-
             model = photo.firstPhoto,
-
             contentDescription = null,
-
             modifier = Modifier
                 .fillMaxWidth()
-                .height(250.dp),
-
+                .height(250.dp)
+                .clickable {
+                    openPhotoExternally(
+                        context,
+                        photo.firstPhoto
+                    )
+                },
             contentScale = ContentScale.Fit
-
         )
 
         photo.secondPhoto?.let {
@@ -69,15 +91,17 @@ fun DocumentScreen(
             Spacer(Modifier.height(16.dp))
 
             AsyncImage(
-
                 model = it,
-
                 contentDescription = null,
-
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(250.dp),
-
+                    .height(250.dp)
+                    .clickable {
+                        openPhotoExternally(
+                            context,
+                            it
+                        )
+                    },
                 contentScale = ContentScale.Fit
 
             )
@@ -86,108 +110,104 @@ fun DocumentScreen(
 
         Spacer(Modifier.height(24.dp))
 
-        Text(
-
-            text = "OCR",
-
-            style = MaterialTheme.typography.titleMedium
-
-        )
-
-        Spacer(Modifier.height(8.dp))
-
-        Text(photo.ocrText)
-
-        Spacer(Modifier.height(24.dp))
-
-        Text(
-
-            text = "Notas",
-
-            style = MaterialTheme.typography.titleMedium
-
-        )
-
-        Spacer(Modifier.height(8.dp))
-
-        Text(photo.additionalText)
-
-        Spacer(Modifier.height(24.dp))
-
-        Button(
-
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            onClick = {
-                val uris = ArrayList<android.net.Uri>()
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
 
-                val firstFile = File(photo.firstPhoto)
+            Button(
+                modifier = Modifier.weight(1f),
+                onClick = {
 
-                uris.add(
-                    FileProvider.getUriForFile(
-                        context,
-                        "${context.packageName}.provider",
-                        firstFile
+    /*                android.util.Log.d(
+                        "SHARE_TEST",
+                        "firstPhoto=${photo.firstPhoto}"
                     )
-                )
 
-                photo.secondPhoto?.let {
-
-                    val secondFile = File(it)
+                    android.util.Log.d(
+                        "SHARE_TEST",
+                        "firstExists=${File(photo.firstPhoto).exists()}"
+                    )
+*/
+                    val uris = ArrayList<android.net.Uri>()
+                    val firstFile = File(photo.firstPhoto)
 
                     uris.add(
                         FileProvider.getUriForFile(
                             context,
                             "${context.packageName}.provider",
-                            secondFile
+                            firstFile
+                        )
+                    )
+
+                    photo.secondPhoto?.let {
+
+                        val secondFile = File(it)
+
+                        uris.add(
+                            FileProvider.getUriForFile(
+                                context,
+                                "${context.packageName}.provider",
+                                secondFile
+                            )
+                        )
+
+                    }
+
+                    val intent =
+                        if (uris.size == 1) {
+
+                            Intent(Intent.ACTION_SEND).apply {
+
+                                type = "image/jpeg"
+
+                                putExtra(Intent.EXTRA_STREAM, uris[0])
+
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+
+                            }
+
+                        } else {
+
+                            Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+
+                                type = "image/jpeg"
+
+                                putParcelableArrayListExtra(
+                                    Intent.EXTRA_STREAM,
+                                    uris
+                                )
+
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+
+                            }
+
+                        }
+
+                    context.startActivity(
+                        Intent.createChooser(
+                            intent,
+                            "Compartir fotografías"
                         )
                     )
 
                 }
-
-                val intent = if (uris.size == 1) {
-
-                    Intent(Intent.ACTION_SEND).apply {
-
-                        type = "image/jpeg"
-
-                        putExtra(Intent.EXTRA_STREAM, uris[0])
-
-                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-
-                    }
-
-                } else {
-
-                    Intent(Intent.ACTION_SEND_MULTIPLE).apply {
-
-                        type = "image/jpeg"
-
-                        putParcelableArrayListExtra(
-                            Intent.EXTRA_STREAM,
-                            uris
-                        )
-
-                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-
-                    }
-
-                }
-
-                context.startActivity(
-                    Intent.createChooser(
-                        intent,
-                        "Compartir fotografías"
-                    )
-                )
-
+            ) {
+                Text("Compartir")
             }
 
-        ) {
+            Button(
+                modifier = Modifier.weight(1f),
+                onClick = {
+                    showDeleteDialog = true
+                }
+            ) {
+                Text("Eliminar")
+            }
 
-            Text("Compartir")
+
 
         }
-
         Spacer(Modifier.height(12.dp))
 
         Button(
@@ -196,15 +216,63 @@ fun DocumentScreen(
 
             onClick = {
 
-                showDeleteDialog = true
+                viewModel.updateNotes(
+                    photo.id,
+                    notes
+                )
+
+                android.widget.Toast.makeText(
+                    context,
+                    "Notas actualizadas",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
 
             }
 
         ) {
 
-            Text("Eliminar")
+            Text("Modificar notas")
 
         }
+
+        Spacer(Modifier.height(20.dp))
+
+        Text(
+            "Notas",
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        Spacer(Modifier.height(4.dp))
+
+        OutlinedTextField(
+
+            value = notes,
+
+            onValueChange = {
+
+                notes = it
+
+            },
+
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(focusRequester),
+
+        )
+
+        Spacer(Modifier.height(20.dp))
+
+        Text(
+            "OCR",
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        Spacer(Modifier.height(4.dp))
+
+        Text(photo.ocrText)
+
+
+        Spacer(Modifier.height(24.dp))
 
     }
 
@@ -273,5 +341,44 @@ fun DocumentScreen(
         )
 
     }
+
+}
+
+private fun openPhotoExternally(
+    context: android.content.Context,
+    photoPath: String
+) {
+
+    val file = File(photoPath)
+
+    val uri = FileProvider.getUriForFile(
+        context,
+        "${context.packageName}.provider",
+        file
+    )
+
+    val intent = Intent().apply {
+
+        action = Intent.ACTION_VIEW
+        setDataAndType(uri, "image/jpeg")
+
+        addFlags(
+            Intent.FLAG_GRANT_READ_URI_PERMISSION
+        )
+
+        addFlags(
+            Intent.FLAG_ACTIVITY_CLEAR_TOP
+        )
+    }
+
+    android.util.Log.d(
+        "OPEN_PHOTO",
+        "Abriendo: $uri"
+    )
+
+
+    context.startActivity(intent)
+
+
 
 }

@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import es.fotoindex.app.viewmodel.PhotoViewModel
-
+import androidx.compose.foundation.clickable
 
 @Composable
 
@@ -31,7 +31,8 @@ fun HomeScreen(
     onGalleryClick: () -> Unit,
     onSearchClick: () -> Unit,
     onExportClick: () -> Unit,
-    onSettingsClick: () -> Unit
+    onSettingsClick: () -> Unit,
+    onOpenDocument: (Long) -> Unit
 
 ) {
 
@@ -120,23 +121,30 @@ fun HomeScreen(
 
             items(photoViewModel.photos) { photo ->
 
-                AsyncImage(
-                    model = photo.firstPhoto,
-                    contentDescription = null,
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(120.dp),
-                    contentScale = ContentScale.Crop
-                )
+                        .clickable {
+                            SelectedDocument.photo = photo
+                            onOpenDocument(photo.id)
+                        }
+                ) {
+                    AsyncImage(
+                        model = photo.firstPhoto,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(120.dp),
+                        contentScale = ContentScale.Crop
+                    )
 
-                Text(
-                    text = photo.ocrText.take(150)
-                )
+                    Text(
+                        text = photo.ocrText.take(150)
+                    )
 
-                Spacer(modifier = Modifier.height(20.dp))
-
+                    Spacer(modifier = Modifier.height(20.dp))
+                }
             }
-
         }
     }
 }

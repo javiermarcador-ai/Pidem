@@ -26,18 +26,26 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.foundation.layout.systemBarsPadding
 
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.Alignment
+import androidx.compose.material3.Checkbox
+import es.fotoindex.app.data.DetailState
 
 @Composable
 fun DetailScreen(onOpenDocument: (Long) -> Unit) {
 
     val viewModel: PhotoViewModel = viewModel()
+
     var searchText by remember {
-
-        mutableStateOf("")
-
+        mutableStateOf(DetailState.searchText)
     }
+
+    var searchInNotes by remember {
+        mutableStateOf(DetailState.searchInNotes)
+    }
+
 
     var showDeleteDialog by remember {
         mutableStateOf(false)
@@ -48,7 +56,20 @@ fun DetailScreen(onOpenDocument: (Long) -> Unit) {
     }
 
     LaunchedEffect(Unit) {
-        viewModel.loadPhotos()
+
+        if (DetailState.searchText.isBlank()) {
+
+            viewModel.loadPhotos()
+
+        } else {
+
+            viewModel.search(
+                DetailState.searchText,
+                DetailState.searchInNotes
+            )
+
+        }
+
     }
 
     Column(
@@ -58,27 +79,56 @@ fun DetailScreen(onOpenDocument: (Long) -> Unit) {
         OutlinedTextField(
 
             value = searchText,
-
             onValueChange = {
-
                 searchText = it
-
-                viewModel.search(it)
+                DetailState.searchText = it
+                viewModel.search(
+                    it,
+                    searchInNotes
+                )
 
             },
 
             modifier = Modifier
                 .fillMaxWidth()
-                .systemBarsPadding()
-                .padding(8.dp),
+                .statusBarsPadding()
+                .padding(horizontal = 8.dp),
 
-            label = {
-
+            placeholder = {
                 Text("Buscar...")
+            },
 
-            }
+            singleLine = true
 
         )
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+
+            Checkbox(
+                checked = searchInNotes,
+                onCheckedChange = {
+
+                    searchInNotes = it
+
+                    DetailState.searchInNotes = it
+
+                    viewModel.search(
+                        searchText,
+                        searchInNotes
+                    )
+
+                }
+            )
+
+            Text("Buscar también en notas")
+
+        }
+
 
         LazyColumn(
             modifier = Modifier.weight(1f)

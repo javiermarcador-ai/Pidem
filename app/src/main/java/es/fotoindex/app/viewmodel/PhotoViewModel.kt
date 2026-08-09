@@ -51,6 +51,20 @@ class PhotoViewModel(application: Application): AndroidViewModel(application) {
 
     }
 
+    fun updateNotes(
+        id: Long,
+        notes: String
+    ) {
+        viewModelScope.launch {
+            repository.updateNotes(
+                id,
+                notes
+            )
+            loadPhotos()
+        }
+    }
+
+
     fun savePhoto(
 
         firstPhoto: String,
@@ -66,35 +80,23 @@ class PhotoViewModel(application: Application): AndroidViewModel(application) {
         viewModelScope.launch {
 
             val photo = PhotoRecord(
-
                 firstPhoto = firstPhoto,
-
                 secondPhoto = secondPhoto,
-
                 ocrText = ocrText,
-
                 additionalText = additionalText,
-
                 createdAt = System.currentTimeMillis()
 
             )
-
-
-
             repository.insert(photo)
-
-
-
             loadPhotos()
-
-
-
 
         }
 
     }
-
-    fun search(text: String) {
+    fun search(
+        text: String,
+        searchInNotes: Boolean
+    ) {
 
         viewModelScope.launch {
 
@@ -108,9 +110,19 @@ class PhotoViewModel(application: Application): AndroidViewModel(application) {
 
             } else {
 
-                photos.addAll(
-                    repository.search(text)
-                )
+                if (searchInNotes) {
+
+                    photos.addAll(
+                        repository.searchIncludingNotes(text)
+                    )
+
+                } else {
+
+                    photos.addAll(
+                        repository.search(text)
+                    )
+
+                }
 
             }
 
