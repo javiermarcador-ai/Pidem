@@ -32,11 +32,20 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.ui.Alignment
 import androidx.compose.material3.Checkbox
 import es.fotoindex.app.data.DetailState
+import androidx.compose.foundation.layout.Arrangement
+import android.content.Intent
+import android.net.Uri
+import androidx.core.content.FileProvider
+import java.io.File
+import androidx.compose.ui.platform.LocalContext
+
 
 @Composable
 fun DetailScreen(onOpenDocument: (Long) -> Unit) {
 
     val viewModel: PhotoViewModel = viewModel()
+
+    val context = LocalContext.current
 
     var searchText by remember {
         mutableStateOf(DetailState.searchText)
@@ -49,6 +58,14 @@ fun DetailScreen(onOpenDocument: (Long) -> Unit) {
 
     var showDeleteDialog by remember {
         mutableStateOf(false)
+    }
+
+    var showMultipleDeleteDialog by remember {
+        mutableStateOf(false)
+    }
+
+    var selectedIds by remember {
+        mutableStateOf(setOf<Long>())
     }
 
     var photoToDelete by remember {
@@ -129,6 +146,100 @@ fun DetailScreen(onOpenDocument: (Long) -> Unit) {
 
         }
 
+        if (selectedIds.isNotEmpty()) {
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+
+                Button(
+                    modifier = Modifier.weight(1f),
+                    onClick = {
+
+                        val uris = ArrayList<android.net.Uri>()
+
+                        viewModel.photos
+                            .filter { it.id in selectedIds }
+                            .forEach { photo ->
+
+                                val firstFile = File(photo.firstPhoto)
+
+                                if (firstFile.exists()) {
+
+                                    uris.add(
+                                        FileProvider.getUriForFile(
+                                            context,
+                                            "${context.packageName}.provider",
+                                            firstFile
+                                        )
+                                    )
+
+                                }
+
+                                photo.secondPhoto?.let { secondPath ->
+
+                                    val secondFile = File(secondPath)
+
+                                    if (secondFile.exists()) {
+
+                                        uris.add(
+                                            FileProvider.getUriForFile(
+                                                context,
+                                                "${context.packageName}.provider",
+                                                secondFile
+                                            )
+                                        )
+
+                                    }
+
+                                }
+
+                            }
+
+                        if (uris.isNotEmpty()) {
+
+                            val intent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+
+                                type = "image/jpeg"
+
+                                putParcelableArrayListExtra(
+                                    Intent.EXTRA_STREAM,
+                                    uris
+                                )
+
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+
+                            }
+
+                            context.startActivity(
+                                Intent.createChooser(
+                                    intent,
+                                    "Compartir fotografías"
+                                )
+                            )
+
+                        }
+
+                    }
+                ) {
+                    Text("Compartir")
+                }
+
+                Button(
+                    modifier = Modifier.weight(1f),
+                    onClick = {
+                        showMultipleDeleteDialog = true
+                    }
+                ) {
+                    Text("Borrar todas")
+                }
+
+            }
+        }
+
 
         LazyColumn(
             modifier = Modifier.weight(1f)
@@ -137,7 +248,6 @@ fun DetailScreen(onOpenDocument: (Long) -> Unit) {
             items(viewModel.photos) { photo ->
 
                 Card(
-
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(8.dp),
@@ -151,7 +261,6 @@ fun DetailScreen(onOpenDocument: (Long) -> Unit) {
                     }
 
                 ) {
-
                     Row(
                         modifier = Modifier.padding(8.dp)
                     ) {
@@ -186,24 +295,29 @@ fun DetailScreen(onOpenDocument: (Long) -> Unit) {
 
                         }
 
-                        IconButton(
+                        Checkbox(
+                            checked = photo.id in selectedIds,
+                            onCheckedChange = { checked ->
 
-                            onClick = {
-
-                                photoToDelete = photo.id
-
-                                showDeleteDialog = true
+                                selectedIds =
+                                    if (checked) {
+                                        selectedIds + photo.id
+                                    } else {
+                                        selectedIds - photo.id
+                                    }
 
                             }
+                        )
 
+                        IconButton(
+                            onClick = {
+                                photoToDelete = photo.id
+                                showDeleteDialog = true
+                            }
                         ) {
-
                             Icon(
-
                                 imageVector = Icons.Default.Delete,
-
                                 contentDescription = "Eliminar"
-
                             )
 
                         }
@@ -218,25 +332,16 @@ fun DetailScreen(onOpenDocument: (Long) -> Unit) {
     }
 
     if (showDeleteDialog) {
-
         AlertDialog(
-
             onDismissRequest = {
-
                 showDeleteDialog = false
-
             },
-
             title = {
-
                 Text("Eliminar documento")
-
             },
 
             text = {
-
                 Text("¿Está seguro de que desea eliminar este documento?")
-
             },
 
             confirmButton = {
@@ -270,6 +375,60 @@ fun DetailScreen(onOpenDocument: (Long) -> Unit) {
                     onClick = {
 
                         showDeleteDialog = false
+
+                    }
+
+                ) {
+
+                    Text("Cancelar")
+
+                }
+
+            }
+
+        )
+
+    }
+
+
+    if (showMultipleDeleteDialog) {
+
+        AlertDialog(
+            onDismissRequest = {
+                showMultipleDeleteDialog = false
+            },
+
+            title = {
+                Text("Eliminar documentos")
+            },
+
+            text = {
+                Text(
+                    "¿Seguro que desea eliminar " +
+                            "${selectedIds.size} documentos seleccionados?"
+                )
+            },
+
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deletePhotos(selectedIds)
+                        selectedIds = emptySet()
+                        showMultipleDeleteDialog = false
+                    }
+                ) {
+                    Text("Eliminar")
+                }
+
+            },
+
+            dismissButton = {
+
+                Button(
+
+                    onClick = {
+
+                        showMultipleDeleteDialog = false
 
                     }
 

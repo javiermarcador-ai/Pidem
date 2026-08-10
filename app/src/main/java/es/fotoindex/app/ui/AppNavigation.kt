@@ -6,6 +6,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import es.fotoindex.app.data.ReviewData
 import es.fotoindex.app.data.DetailState
+import es.fotoindex.app.data.CaptureSessionState
+
 
 @Composable
 fun AppNavigation() {
@@ -21,6 +23,8 @@ fun AppNavigation() {
 
             HomeScreen(
                 onCaptureClick = {
+
+                    CaptureSessionState.firstPhotoFromGallery = false
 
                     es.fotoindex.app.image.ImageProvider.source =
                         es.fotoindex.app.image.ImageSource.CAMERA
@@ -44,10 +48,16 @@ fun AppNavigation() {
                 },
 
                 onGalleryClick = {
+
+                    CaptureSessionState.firstPhotoFromGallery = true
+
                     es.fotoindex.app.image.ImageProvider.source =
                         es.fotoindex.app.image.ImageSource.GALLERY
+
                     navController.navigate(AppScreen.Camera.route)
+
                 },
+
 
                 onOpenDocument = {
                     navController.navigate(AppScreen.Document.route)

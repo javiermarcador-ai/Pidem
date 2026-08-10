@@ -51,6 +51,15 @@ class PhotoViewModel(application: Application): AndroidViewModel(application) {
 
     }
 
+    fun deletePhotos(ids: Set<Long>) {
+        viewModelScope.launch {
+            ids.forEach { id ->
+                repository.delete(id)
+            }
+            loadPhotos()
+        }
+    }
+
     fun updateNotes(
         id: Long,
         notes: String

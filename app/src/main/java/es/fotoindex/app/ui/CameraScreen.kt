@@ -23,6 +23,7 @@ import android.net.Uri
 import androidx.activity.result.contract.ActivityResultContracts.GetContent
 import es.fotoindex.app.model.CaptureSource
 import es.fotoindex.app.ocr.OcrPipeline
+import es.fotoindex.app.data.CaptureSessionState
 
 @Composable
 fun CameraScreen(navController: androidx.navigation.NavHostController) {
@@ -216,61 +217,35 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
             Button(
                 modifier = Modifier.fillMaxWidth(),
                 onClick = {
-
-
                     CameraPreview.takePhoto(context) { photoPath ->
-
                         OcrPipeline.process(
-
                             context = context,
-
                             imagePath = photoPath,
-
                             onSuccess = { text ->
-
                                 session = if (session.reviewingFirstPhoto) {
-
                                     session.copy(
-
                                         previewPhotoPath = photoPath,
-
                                         reviewingPhoto = true,
-
                                         firstOcrText = text
-
                                     )
 
                                 } else {
-
                                     session.copy(
-
                                         previewPhotoPath = photoPath,
-
                                         reviewingPhoto = true,
-
-
                                     )
-
                                 }
-
                             },
 
                             onError = {
-
                                 session = if (session.reviewingFirstPhoto) {
-
                                     session.copy(
-
                                         previewPhotoPath = photoPath,
-
                                         reviewingPhoto = true,
-
                                         firstOcrText = ""
-
                                     )
 
                                 } else {
-
                                     session.copy(
                                         previewPhotoPath = photoPath,
                                         reviewingPhoto = true,
@@ -316,45 +291,28 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
             Button(
                 modifier = Modifier.fillMaxWidth(),
                 onClick = {
-
                     val croppedPath = ImageCropper.processCrop(
-
                         context = context,
-
                         bitmap = CropBitmapState.bitmap!!,
-
                         cropArea = CropState.cropArea
-
                     )
 
                     if (session.reviewingFirstPhoto) {
-
                         session = session.copy(
-
                             firstPhotoPath = croppedPath,
-
                             previewPhotoPath = null,
-
                             reviewingPhoto = false,
-
                             showSecondPhotoDialog = true
-
                         )
 
                     } else {
-
                         session = session.copy(
-
                             secondPhotoPath = croppedPath,
-
                             previewPhotoPath = null,
-
                             reviewingPhoto = false
-
                         )
 
                         ReviewData.session = session.copy(
-
                             ocrText = buildString {
                                 append(session.firstOcrText)
                                 if (session.secondOcrText.isNotBlank()) {
@@ -386,10 +344,8 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
     if (session.showSecondPhotoDialog) {
 
         androidx.compose.material3.AlertDialog(
-
             onDismissRequest = {
                 session = session.copy(showSecondPhotoDialog = false)
-
             },
 
             title = {
@@ -402,17 +358,27 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
 
             confirmButton = {
 
-
                 Button(
                     onClick = {
+
                         session = session.copy(
                             showSecondPhotoDialog = false,
                             reviewingFirstPhoto = false,
                             reviewingPhoto = false,
                             previewPhotoPath = null
                         )
-                        es.fotoindex.app.image.ImageProvider.source =
-                            es.fotoindex.app.image.ImageSource.CAMERA
+
+                        if (CaptureSessionState.firstPhotoFromGallery) {
+
+                            galleryLauncher.launch("image/*")
+
+                        } else {
+
+                            es.fotoindex.app.image.ImageProvider.source =
+                                es.fotoindex.app.image.ImageSource.CAMERA
+
+                        }
+
                     }
                 ) {
                     Text("Sí")

@@ -6,8 +6,15 @@ object CaptureSessionState {
 
     var secondOcrText = ""
 
+    var firstPhotoFromGallery = false
+
     fun clear() {
+
         firstOcrText = ""
+
         secondOcrText = ""
+
+        firstPhotoFromGallery = false
+
     }
 }
