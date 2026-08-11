@@ -107,13 +107,10 @@ fun AppNavigation() {
         composable(AppScreen.Document.route) {
 
             DocumentScreen(
-
+                navController = navController,
                 onBack = {
-
                     navController.popBackStack()
-
                 }
-
             )
 
         }

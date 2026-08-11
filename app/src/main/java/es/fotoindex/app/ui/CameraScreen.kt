@@ -21,14 +21,18 @@ import es.fotoindex.app.data.ReviewData
 import es.fotoindex.app.model.CaptureSession
 import android.net.Uri
 import androidx.activity.result.contract.ActivityResultContracts.GetContent
+import androidx.lifecycle.viewmodel.compose.viewModel
 import es.fotoindex.app.model.CaptureSource
 import es.fotoindex.app.ocr.OcrPipeline
 import es.fotoindex.app.data.CaptureSessionState
+import es.fotoindex.app.database.PhotoAttachment
+import es.fotoindex.app.viewmodel.PhotoViewModel
 
 @Composable
 fun CameraScreen(navController: androidx.navigation.NavHostController) {
 
     val context = LocalContext.current
+    val viewModel: PhotoViewModel = viewModel()
 
     var session by remember {mutableStateOf(CaptureSession())  }
 
@@ -142,10 +146,13 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
 
         Text(
             text =
-                if (session.reviewingFirstPhoto)
+                if (CaptureSessionState.additionalPhotoDocumentId != null) {
+                    "Fotografía adicional"
+                } else if (session.reviewingFirstPhoto) {
                     "Primera fotografía"
-                else
-                    "Segunda fotografía",
+                } else {
+                    "Segunda fotografía"
+                },
             style = MaterialTheme.typography.headlineMedium
         )
 
@@ -263,10 +270,13 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
             ) {
 
                 Text(
-                    if (session.reviewingFirstPhoto)
+                    if (CaptureSessionState.additionalPhotoDocumentId != null) {
+                        "Tomar fotografía"
+                    } else if (session.reviewingFirstPhoto) {
                         "Tomar primera fotografía"
-                    else
+                    } else {
                         "Tomar segunda fotografía"
+                    }
                 )
             }
 
@@ -297,43 +307,56 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
                         cropArea = CropState.cropArea
                     )
 
-                    if (session.reviewingFirstPhoto) {
-                        session = session.copy(
-                            firstPhotoPath = croppedPath,
-                            previewPhotoPath = null,
-                            reviewingPhoto = false,
-                            showSecondPhotoDialog = true
+                    val additionalPhotoDocumentId =
+                        CaptureSessionState.additionalPhotoDocumentId
+
+                    if (additionalPhotoDocumentId != null) {
+
+                        viewModel.addAttachment(
+                            photoId = additionalPhotoDocumentId,
+                            imagePath = croppedPath
                         )
 
-                    } else {
-                        session = session.copy(
-                            secondPhotoPath = croppedPath,
-                            previewPhotoPath = null,
-                            reviewingPhoto = false
-                        )
+                        CaptureSessionState.additionalPhotoDocumentId = null
 
-                        ReviewData.session = session.copy(
-                            ocrText = buildString {
-                                append(session.firstOcrText)
-                                if (session.secondOcrText.isNotBlank()) {
-                                    append("\n\n")
-                                    append(session.secondOcrText)
-                                }
+                        navController.popBackStack()
+
+                    } else  if (session.reviewingFirstPhoto) {
+                            session = session.copy(
+                                firstPhotoPath = croppedPath,
+                                previewPhotoPath = null,
+                                reviewingPhoto = false,
+                                showSecondPhotoDialog = true
+                            )
+
+                            } else {
+                                session = session.copy(
+                                    secondPhotoPath = croppedPath,
+                                    previewPhotoPath = null,
+                                    reviewingPhoto = false
+                                )
+
+                                ReviewData.session = session.copy(
+                                    ocrText = buildString {
+                                        append(session.firstOcrText)
+                                        if (session.secondOcrText.isNotBlank()) {
+                                            append("\n\n")
+                                            append(session.secondOcrText)
+                                        }
+                                    }
+                                )
+
+                                /* android.util.Log.d(
+                                    "FotoIndex",
+                                    "Cargando fotografías..."
+                                )*/
+
+                                navController.navigate(AppScreen.Review.route)
+
                             }
-                        )
-
-                        /* android.util.Log.d(
-                            "FotoIndex",
-                            "Cargando fotografías..."
-                        )*/
-
-
-                        navController.navigate(AppScreen.Review.route)
 
                     }
-
-                }
-            ) {
+            )  {
                 Text("✅ Aceptar fotografía")
             }
 

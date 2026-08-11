@@ -45,4 +45,37 @@ class PhotoRepository(
         )
 
     }
+
+
+    suspend fun insertAttachment(
+        attachment: PhotoAttachment
+    ) {
+
+        photoDao.insertAttachment(
+            attachment
+        )
+
+    }
+
+    suspend fun getAttachments(
+        photoId: Long
+    ): List<PhotoAttachment> {
+
+        return photoDao.getAttachments(
+            photoId
+        )
+
+    }
+
+    suspend fun deleteAttachment(
+        attachmentId: Long
+    ) {
+
+        photoDao.deleteAttachment(
+            attachmentId
+        )
+
+    }
+
+
 }

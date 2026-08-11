@@ -48,7 +48,28 @@ WHERE id = :id
         notes: String
     )
 
+    @Insert
+    suspend fun insertAttachment(
+        attachment: PhotoAttachment
+    )
 
+    @Query("""
+SELECT *
+FROM photo_attachments
+WHERE photoId = :photoId
+ORDER BY createdAt ASC
+""")
+    suspend fun getAttachments(
+        photoId: Long
+    ): List<PhotoAttachment>
+
+    @Query("""
+DELETE FROM photo_attachments
+WHERE id = :attachmentId
+""")
+    suspend fun deleteAttachment(
+        attachmentId: Long
+    )
 
 
 }

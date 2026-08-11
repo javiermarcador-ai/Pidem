@@ -8,6 +8,8 @@ object CaptureSessionState {
 
     var firstPhotoFromGallery = false
 
+    var additionalPhotoDocumentId: Long? = null
+
     fun clear() {
 
         firstOcrText = ""
@@ -15,6 +17,8 @@ object CaptureSessionState {
         secondOcrText = ""
 
         firstPhotoFromGallery = false
+
+        additionalPhotoDocumentId = null
 
     }
 }

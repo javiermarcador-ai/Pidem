@@ -139,4 +139,59 @@ class PhotoViewModel(application: Application): AndroidViewModel(application) {
 
     }
 
+
+    fun loadAttachments(
+        photoId: Long,
+        target: SnapshotStateList<es.fotoindex.app.database.PhotoAttachment>
+    ) {
+
+        viewModelScope.launch {
+
+            target.clear()
+
+            target.addAll(
+                repository.getAttachments(photoId)
+            )
+
+        }
+
+    }
+
+    fun addAttachment(
+        photoId: Long,
+        imagePath: String
+    ) {
+
+        viewModelScope.launch {
+
+            repository.insertAttachment(
+
+                es.fotoindex.app.database.PhotoAttachment(
+                    photoId = photoId,
+                    imagePath = imagePath
+                )
+
+            )
+
+        }
+
+    }
+
+    fun deleteAttachment(
+        attachmentId: Long
+    ) {
+
+        viewModelScope.launch {
+
+            repository.deleteAttachment(
+                attachmentId
+            )
+
+        }
+
+    }
+
+
+
+
 }

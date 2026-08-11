@@ -27,21 +27,77 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.foundation.relocation.BringIntoViewRequester
-import androidx.compose.foundation.relocation.bringIntoViewRequester
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.unit.dp
+import es.fotoindex.app.database.PhotoAttachment
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateListOf
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import es.fotoindex.app.data.CaptureSessionState
+import androidx.compose.ui.Alignment
 
 
 @Composable
 fun DocumentScreen(
 
+    navController: androidx.navigation.NavHostController,
     onBack: () -> Unit
 
 ) {
     val photo = SelectedDocument.photo ?: return
     val context = LocalContext.current
     val viewModel: PhotoViewModel = viewModel()
+    val attachments =
+        remember {
+            mutableStateListOf<PhotoAttachment>()
+        }
+
+    val galleryLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.GetMultipleContents()
+        ) { uris ->
+
+            uris.forEach { uri ->
+
+                CameraPreview.copyGalleryImage(
+                    context = context,
+                    uri = uri
+                ) { copiedPath ->
+
+                    viewModel.addAttachment(
+                        photoId = photo.id,
+                        imagePath = copiedPath
+                    )
+
+                    attachments.add(
+                        es.fotoindex.app.database.PhotoAttachment(
+                            photoId = photo.id,
+                            imagePath = copiedPath
+                        )
+                    )
+
+                }
+
+            }
+
+        }
+
+
+
+    LaunchedEffect(photo.id) {
+
+        viewModel.loadAttachments(
+            photo.id,
+            attachments
+        )
+
+    }
 
     var notes by remember {
         mutableStateOf(photo.additionalText)
@@ -54,29 +110,45 @@ fun DocumentScreen(
     val coroutineScope = rememberCoroutineScope()
 
     var showDeleteDialog by remember {
-
         mutableStateOf(false)
-
     }
 
-    Column(
+    var showAddPhotoDialog by remember {
+        mutableStateOf(false)
+    }
 
+    var selectedAttachment by remember {
+        mutableStateOf<PhotoAttachment?>(null)
+    }
+
+    var showAttachmentDeleteDialog by remember {
+        mutableStateOf(false)
+    }
+    Column(
         modifier = Modifier
             .fillMaxSize()
             .systemBarsPadding()
             .imePadding()
-            .padding(16.dp)
+            .padding(horizontal = 16.dp)
             .verticalScroll(rememberScrollState())
+    ){
 
+        Spacer(Modifier.height(8.dp))
 
-    ) {
+        Text(
+            text = "Lista de documentos",
+            style = MaterialTheme.typography.headlineMedium
+        )
+
+        Spacer(Modifier.height(4.dp))
+
 
         AsyncImage(
             model = photo.firstPhoto,
             contentDescription = null,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(250.dp)
+                .height(160.dp)
                 .clickable {
                     openPhotoExternally(
                         context,
@@ -88,14 +160,14 @@ fun DocumentScreen(
 
         photo.secondPhoto?.let {
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(12.dp))
 
             AsyncImage(
                 model = it,
                 contentDescription = null,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(250.dp)
+                    .height(160.dp)
                     .clickable {
                         openPhotoExternally(
                             context,
@@ -208,12 +280,22 @@ fun DocumentScreen(
 
 
         }
-        Spacer(Modifier.height(12.dp))
+
+        Spacer(Modifier.height(6.dp))
 
         Button(
-
             modifier = Modifier.fillMaxWidth(),
+            onClick = {
+                showAddPhotoDialog = true
+            }
+        ) {
+            Text("Añadir más fotos")
+        }
 
+        Spacer(Modifier.height(6.dp))
+
+        Button(
+            modifier = Modifier.fillMaxWidth(),
             onClick = {
 
                 viewModel.updateNotes(
@@ -228,13 +310,9 @@ fun DocumentScreen(
                 ).show()
 
             }
-
         ) {
-
             Text("Modificar notas")
-
         }
-
         Spacer(Modifier.height(20.dp))
 
         Text(
@@ -263,73 +341,109 @@ fun DocumentScreen(
         Spacer(Modifier.height(20.dp))
 
         Text(
+            "Fotos adicionales",
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        if (attachments.isEmpty()) {
+
+            Text(
+                "No hay fotografías adicionales."
+            )
+
+        } else {
+
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+
+                items(attachments) { attachment ->
+
+                    AsyncImage(
+                        model = attachment.imagePath,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(120.dp)
+                            /*.clickable {
+
+                                openPhotoExternally(
+                                    context,
+                                    attachment.imagePath
+                                )
+
+                            },
+                            */
+
+                            .clickable {
+
+                                selectedAttachment = attachment
+
+                            },
+
+                        contentScale = ContentScale.Crop
+                    )
+
+                }
+
+            }
+
+        }
+
+
+
+
+
+        Spacer(Modifier.height(20.dp))
+
+        Text(
             "OCR",
             style = MaterialTheme.typography.titleMedium
         )
 
         Spacer(Modifier.height(4.dp))
 
-        Text(photo.ocrText)
-
+        Text(
+            photo.ocrText
+        )
 
         Spacer(Modifier.height(24.dp))
+
 
     }
 
     if (showDeleteDialog) {
-
         AlertDialog(
-
             onDismissRequest = {
-
                 showDeleteDialog = false
-
             },
-
             title = {
-
                 Text("Eliminar documento")
-
             },
-
             text = {
-
                 Text("¿Seguro que desea eliminar este documento?")
-
             },
 
             confirmButton = {
-
                 Button(
-
                     onClick = {
-
                         viewModel.deletePhoto(photo.id)
-
                         showDeleteDialog = false
-
                         onBack()
-
                     }
 
                 ) {
-
                     Text("Eliminar")
-
                 }
-
             },
 
             dismissButton = {
-
                 Button(
-
                     onClick = {
-
                         showDeleteDialog = false
-
                     }
-
                 ) {
 
                     Text("Cancelar")
@@ -340,6 +454,201 @@ fun DocumentScreen(
 
         )
 
+    }
+
+
+    if (showAddPhotoDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showAddPhotoDialog = false
+            },
+
+            title = {
+                Text("Añadir fotografías")
+            },
+
+            text = {
+                Text("Añadir imágenes desde:")
+            },
+
+            confirmButton = {
+                Button(
+                    onClick = {
+
+                        showAddPhotoDialog = false
+
+                        CaptureSessionState.additionalPhotoDocumentId = photo.id
+
+                        es.fotoindex.app.image.ImageProvider.source =
+                            es.fotoindex.app.image.ImageSource.CAMERA
+
+                        navController.navigate(AppScreen.Camera.route)
+
+                    }
+                ) {
+                    Text("📷 Cámara")
+                }
+
+            },
+
+            dismissButton = {
+                Button(
+                    onClick = {
+
+                        showAddPhotoDialog = false
+
+                        galleryLauncher.launch("image/*")
+
+                    }
+                ) {
+                    Text("🖼 Galería")
+                }
+
+            }
+
+        )
+
+    }
+
+
+    if (selectedAttachment != null) {
+
+        AlertDialog(
+
+            onDismissRequest = {
+                selectedAttachment = null
+            },
+
+            title = {
+                Text("Imagen")
+            },
+
+            text = {
+
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+
+                    selectedAttachment?.let { attachment ->
+
+                        AsyncImage(
+                            model = attachment.imagePath,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(80.dp),
+                            contentScale = ContentScale.Fit
+                        )
+
+                        Spacer(
+                            Modifier.height(12.dp)
+                        )
+
+                    }
+
+                    Text(
+                        "¿Qué desea hacer con esta imagen?"
+                    )
+
+                }
+
+            },
+
+            confirmButton = {
+
+                Button(
+                    onClick = {
+
+                        val attachment =
+                            selectedAttachment
+
+                        if (attachment != null) {
+
+                            openPhotoExternally(
+                                context,
+                                attachment.imagePath
+                            )
+
+                        }
+
+                        selectedAttachment = null
+
+                    }
+                ) {
+                    Text("Ver")
+                }
+
+            },
+
+            dismissButton = {
+
+                Button(
+                    onClick = {
+
+                        showAttachmentDeleteDialog = true
+
+                    }
+                ) {
+                    Text("Eliminar")
+                }
+
+            }
+
+        )
+
+    }
+
+
+    if (showAttachmentDeleteDialog) {
+
+        AlertDialog(
+            onDismissRequest = {
+                showAttachmentDeleteDialog = false
+                selectedAttachment = null
+            },
+
+            title = {
+                Text("Eliminar imagen")
+            },
+
+            text = {
+                Text("¿Está seguro de eliminar esta imagen?")
+            },
+
+            confirmButton = {
+                Button(
+                    onClick = {
+                        selectedAttachment?.let { attachment ->
+
+                            File(attachment.imagePath).delete()
+
+                            viewModel.deleteAttachment(
+                                attachment.id
+                            )
+
+                            attachments.remove(
+                                attachment
+                            )
+                        }
+                        showAttachmentDeleteDialog = false
+                        selectedAttachment = null
+                    }
+                ) {
+                    Text("Sí")
+                }
+
+            },
+
+            dismissButton = {
+                Button(
+                    onClick = {
+                        showAttachmentDeleteDialog = false
+                    }
+                ) {
+                    Text("No")
+                }
+            }
+        )
     }
 
 }
