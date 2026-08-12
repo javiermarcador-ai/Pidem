@@ -20,6 +20,7 @@ import kotlin.math.abs
 import android.graphics.Bitmap
 import android.graphics.Matrix
 import androidx.exifinterface.media.ExifInterface
+import androidx.compose.ui.platform.LocalContext
 
 
 @Composable
@@ -31,10 +32,14 @@ fun CropImageView(
 
 ) {
 
+    val context = androidx.compose.ui.platform.LocalContext.current
+
     val bitmap = remember(imagePath) {
 
-        ImageCropper.loadBitmap(imagePath)
-
+        ImageCropper.loadBitmap(
+            context,
+            imagePath
+        )
 
     }
 

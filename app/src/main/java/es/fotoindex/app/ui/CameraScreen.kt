@@ -229,7 +229,9 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
                             context = context,
                             imagePath = photoPath,
                             onSuccess = { text ->
+
                                 session = if (session.reviewingFirstPhoto) {
+
                                     session.copy(
                                         previewPhotoPath = photoPath,
                                         reviewingPhoto = true,
@@ -237,15 +239,21 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
                                     )
 
                                 } else {
+
                                     session.copy(
                                         previewPhotoPath = photoPath,
                                         reviewingPhoto = true,
+                                        secondOcrText = text
                                     )
+
                                 }
                             },
 
+
                             onError = {
+
                                 session = if (session.reviewingFirstPhoto) {
+
                                     session.copy(
                                         previewPhotoPath = photoPath,
                                         reviewingPhoto = true,
@@ -253,14 +261,16 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
                                     )
 
                                 } else {
+
                                     session.copy(
                                         previewPhotoPath = photoPath,
                                         reviewingPhoto = true,
+                                        secondOcrText = ""
                                     )
 
                                 }
 
-                            }
+                            },
 
                         )
 

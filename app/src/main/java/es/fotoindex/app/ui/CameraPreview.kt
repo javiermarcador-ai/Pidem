@@ -1,30 +1,31 @@
 package es.fotoindex.app.ui
 
-
 import android.content.Context
+import android.net.Uri
+import android.widget.Toast
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
+import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
+import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.LifecycleOwner
-import java.io.File
+import es.fotoindex.app.data.PidemStorage
+import java.io.FileInputStream
+import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Locale
-import androidx.camera.core.ImageCaptureException
-import android.net.Uri
-import java.io.FileOutputStream
 
 object CameraPreview {
 
     private var imageCapture: ImageCapture? = null
 
-        fun startCamera(
+    fun startCamera(
         context: Context,
         lifecycleOwner: LifecycleOwner,
         previewView: PreviewView
-
     ) {
 
         val cameraProviderFuture =
@@ -36,7 +37,9 @@ object CameraPreview {
 
             val preview = Preview.Builder().build()
 
-            val imageCapture = ImageCapture.Builder().build()
+            val imageCapture =
+                ImageCapture.Builder().build()
+
             this.imageCapture = imageCapture
 
             preview.surfaceProvider =
@@ -58,91 +61,199 @@ object CameraPreview {
     }
 
     fun copyGalleryImage(
-
         context: Context,
-
         uri: Uri,
-
         onCopied: (String) -> Unit
-
     ) {
 
-        val input = context.contentResolver.openInputStream(uri) ?: return
+        val input =
+            context.contentResolver.openInputStream(uri)
+                ?: return
 
-        val file = File(
+        val fileName =
+            "gallery_" +
+                    System.currentTimeMillis() +
+                    ".jpg"
 
-            context.cacheDir,
+        val destination =
+            PidemStorage.createImageFile(
+                context,
+                fileName
+            )
 
-            "gallery_${System.currentTimeMillis()}.jpg"
+        if (destination == null) {
 
-        )
+            input.close()
 
-        val output = FileOutputStream(file)
+            Toast.makeText(
+                context,
+                "No se ha seleccionado una carpeta de almacenamiento",
+                Toast.LENGTH_LONG
+            ).show()
+
+            return
+        }
+
+        val output =
+            context.contentResolver.openOutputStream(
+                destination.uri
+            )
+
+        if (output == null) {
+
+            input.close()
+
+            Toast.makeText(
+                context,
+                "No se pudo guardar la fotografía",
+                Toast.LENGTH_LONG
+            ).show()
+
+            return
+        }
 
         input.copyTo(output)
 
         input.close()
-
         output.close()
 
-        onCopied(file.absolutePath)
-
+        onCopied(
+            destination.uri.toString()
+        )
     }
-
 
     fun takePhoto(
         context: Context,
         onPhotoSaved: (String) -> Unit
     ) {
 
-        val imageCapture = imageCapture ?: return
+        val imageCapture =
+            imageCapture ?: return
 
-        val photoFile = File(
-            context.cacheDir,
-            "FI_" +
+        val fileName =
+            "Pidem_" +
                     SimpleDateFormat(
                         "yyyyMMdd_HHmmss",
                         Locale.getDefault()
-                    ).format(System.currentTimeMillis()) +
+                    ).format(
+                        System.currentTimeMillis()
+                    ) +
                     ".jpg"
-        )
+
+        val destination =
+            PidemStorage.createImageFile(
+                context,
+                fileName
+            )
+
+        if (destination == null) {
+
+            Toast.makeText(
+                context,
+                "No se ha seleccionado una carpeta de almacenamiento",
+                Toast.LENGTH_LONG
+            ).show()
+
+            return
+        }
+
+        val outputStream =
+            context.contentResolver.openOutputStream(
+                destination.uri
+            )
+
+        if (outputStream == null) {
+
+            Toast.makeText(
+                context,
+                "No se pudo crear la fotografía",
+                Toast.LENGTH_LONG
+            ).show()
+
+            return
+        }
+
+        val tempFile =
+            kotlin.io.path.createTempFile(
+                prefix = "pidem_capture_",
+                suffix = ".jpg"
+            ).toFile()
 
         val outputOptions =
-            ImageCapture.OutputFileOptions.Builder(photoFile).build()
+            ImageCapture.OutputFileOptions
+                .Builder(tempFile)
+                .build()
 
         imageCapture.takePicture(
             outputOptions,
             ContextCompat.getMainExecutor(context),
-            object : ImageCapture.OnImageSavedCallback {
+            object :
+                ImageCapture.OnImageSavedCallback {
 
                 override fun onImageSaved(
-                    outputFileResults: ImageCapture.OutputFileResults
+                    outputFileResults:
+                    ImageCapture.OutputFileResults
                 ) {
 
-                    android.widget.Toast.makeText(
-                        context,
-                        "Foto guardada",
-                        android.widget.Toast.LENGTH_SHORT
-                    ).show()
+                    try {
 
-                    onPhotoSaved(photoFile.absolutePath)
+                        FileInputStream(
+                            tempFile
+                        ).use { input ->
+
+                            input.copyTo(
+                                outputStream
+                            )
+                        }
+
+                        outputStream.close()
+
+                        tempFile.delete()
+
+                        Toast.makeText(
+                            context,
+                            "Foto guardada",
+                            Toast.LENGTH_SHORT
+                        ).show()
+
+                        onPhotoSaved(
+                            destination.uri.toString()
+                        )
+
+                    } catch (e: Exception) {
+
+                        outputStream.close()
+
+                        tempFile.delete()
+
+                        Toast.makeText(
+                            context,
+                            "Error al guardar la fotografía",
+                            Toast.LENGTH_LONG
+                        ).show()
+
+                        e.printStackTrace()
+                    }
                 }
 
                 override fun onError(
                     exception: ImageCaptureException
                 ) {
 
-                    android.widget.Toast.makeText(
+                    outputStream.close()
+
+                    tempFile.delete()
+
+                    Toast.makeText(
                         context,
-                        exception.message ?: "Error desconocido",
-                        android.widget.Toast.LENGTH_LONG
+                        exception.message
+                            ?: "Error desconocido",
+                        Toast.LENGTH_LONG
                     ).show()
 
                     exception.printStackTrace()
-
                 }
             }
         )
     }
-
 }

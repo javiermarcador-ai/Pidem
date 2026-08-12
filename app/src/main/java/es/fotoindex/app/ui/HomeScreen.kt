@@ -15,6 +15,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.material3.AlertDialog
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -25,6 +28,15 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import es.fotoindex.app.viewmodel.PhotoViewModel
 import androidx.compose.foundation.clickable
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import es.fotoindex.app.data.PidemStorage
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
+
 
 @Composable
 fun HomeScreen(
@@ -38,20 +50,37 @@ fun HomeScreen(
 
 ) {
 
+    val context = LocalContext.current
+
     val photoViewModel: PhotoViewModel = viewModel()
+
+    val folderPickerLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.OpenDocumentTree()
+        ) { uri ->
+            if (uri != null) {
+                PidemStorage.saveStorageUri(
+                    context,
+                    uri
+                )
+            }
+        }
+
+    var showStorageDialog by rememberSaveable {
+        mutableStateOf(
+            PidemStorage.getStorageUri(context) == null
+        )
+    }
 
     LaunchedEffect(Unit) {
         photoViewModel.loadPhotos()
     }
 
     Column(
-
         modifier = Modifier
             .fillMaxSize()
             .padding(24.dp),
-
         horizontalAlignment = Alignment.CenterHorizontally
-
     ) {
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -166,6 +195,91 @@ fun HomeScreen(
             }
 
         }
+
+    }
+
+    if (showStorageDialog) {
+
+        AlertDialog(
+
+            onDismissRequest = {
+                // No permitimos cerrar la ventana
+                // sin elegir una ubicación.
+            },
+
+            title = {
+
+                Text(
+                    "Almacenamiento de imágenes"
+                )
+
+            },
+
+            text = {
+
+                Text(
+                    "El directorio de almacenamiento de imágenes será:"
+                )
+
+            },
+
+            confirmButton = {
+
+                Button(
+
+                    onClick = {
+
+                        val defaultUri =
+                            PidemStorage.getDefaultFolderUri()
+
+                        if (defaultUri != null) {
+
+                            PidemStorage.saveStorageUri(
+                                context,
+                                defaultUri
+                            )
+
+                            showStorageDialog = false
+
+                        }
+
+                    }
+
+                ) {
+
+                    Text(
+                        "Directorio por defecto"
+                    )
+
+                }
+
+            },
+
+            dismissButton = {
+
+                Button(
+
+                    onClick = {
+
+                        showStorageDialog = false
+
+                        folderPickerLauncher.launch(
+                            PidemStorage.getDefaultFolderUri()
+                        )
+
+                    }
+
+                ) {
+
+                    Text(
+                        "Elegir directorio"
+                    )
+
+                }
+
+            }
+
+        )
 
     }
 

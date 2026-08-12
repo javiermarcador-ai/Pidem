@@ -1,64 +1,113 @@
 package es.fotoindex.app.ui
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import kotlin.math.roundToInt
-import android.content.Context
-import java.io.File
-import java.io.FileOutputStream
-import es.fotoindex.app.ui.CropArea
 import android.graphics.Matrix
+import android.net.Uri
 import androidx.exifinterface.media.ExifInterface
+import es.fotoindex.app.data.PidemStorage
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import kotlin.math.roundToInt
 
 object ImageCropper {
 
-    fun loadBitmap(path: String): Bitmap {
+    fun loadBitmap(
+        context: Context,
+        path: String
+    ): Bitmap {
 
-        val original = BitmapFactory.decodeFile(path)
+        val uri = Uri.parse(path)
 
-        val exif = ExifInterface(path)
+        val inputStream =
+            context.contentResolver.openInputStream(uri)
+                ?: throw IllegalStateException(
+                    "No se pudo abrir la imagen"
+                )
 
-        val orientation = exif.getAttributeInt(
+        val original = inputStream.use {
 
-            ExifInterface.TAG_ORIENTATION,
+            BitmapFactory.decodeStream(it)
+                ?: throw IllegalStateException(
+                    "No se pudo decodificar la imagen"
+                )
 
-            ExifInterface.ORIENTATION_NORMAL
+        }
 
-        )
+        /*
+         * Normalizamos la orientación UNA SOLA VEZ.
+         *
+         * A partir de aquí Pidem trabaja únicamente
+         * con los píxeles ya orientados.
+         */
+
+        val exifInputStream =
+            context.contentResolver.openInputStream(uri)
+
+        val orientation =
+            exifInputStream?.use {
+
+                val exif = ExifInterface(it)
+
+                exif.getAttributeInt(
+                    ExifInterface.TAG_ORIENTATION,
+                    ExifInterface.ORIENTATION_NORMAL
+                )
+
+            } ?: ExifInterface.ORIENTATION_NORMAL
 
         val matrix = Matrix()
 
         when (orientation) {
 
-            ExifInterface.ORIENTATION_ROTATE_90 ->
+            ExifInterface.ORIENTATION_ROTATE_90 -> {
                 matrix.postRotate(90f)
+            }
 
-            ExifInterface.ORIENTATION_ROTATE_180 ->
+            ExifInterface.ORIENTATION_ROTATE_180 -> {
                 matrix.postRotate(180f)
+            }
 
-            ExifInterface.ORIENTATION_ROTATE_270 ->
+            ExifInterface.ORIENTATION_ROTATE_270 -> {
                 matrix.postRotate(270f)
+            }
+
+            ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> {
+                matrix.setScale(-1f, 1f)
+            }
+
+            ExifInterface.ORIENTATION_FLIP_VERTICAL -> {
+                matrix.setScale(1f, -1f)
+            }
+
+            ExifInterface.ORIENTATION_TRANSPOSE -> {
+                matrix.setRotate(90f)
+                matrix.postScale(-1f, 1f)
+            }
+
+            ExifInterface.ORIENTATION_TRANSVERSE -> {
+                matrix.setRotate(270f)
+                matrix.postScale(-1f, 1f)
+            }
+        }
+
+        if (matrix.isIdentity) {
+
+            return original
 
         }
 
         return Bitmap.createBitmap(
-
             original,
-
             0,
-
             0,
-
             original.width,
-
             original.height,
-
             matrix,
-
             true
-
         )
-
     }
 
     fun cropBitmap(
@@ -78,10 +127,12 @@ object ImageCropper {
     ): Bitmap {
 
         val scaleX =
-            bitmap.width / (imageRight - imageLeft)
+            bitmap.width /
+                    (imageRight - imageLeft)
 
         val scaleY =
-            bitmap.height / (imageBottom - imageTop)
+            bitmap.height /
+                    (imageBottom - imageTop)
 
         val x =
             ((cropLeft - imageLeft) * scaleX)
@@ -99,128 +150,114 @@ object ImageCropper {
             ((cropBottom - cropTop) * scaleY)
                 .roundToInt()
 
-        return Bitmap.createBitmap(
-
-            bitmap,
-
-            x.coerceAtLeast(0),
-
-            y.coerceAtLeast(0),
-
-            width.coerceAtMost(bitmap.width - x),
-
-            height.coerceAtMost(bitmap.height - y)
-
-        )
-
-    }
-
-    fun saveBitmap(
-
-        context: Context,
-
-        bitmap: Bitmap
-
-    ): String {
-
-        val dir = File(
-            context.getExternalFilesDir("Pictures"),
-
-            "LgDragon"
-        )
-
-        if (!dir.exists()) {
-            dir.mkdirs()
-        }
-
-        val today = java.text.SimpleDateFormat(
-
-            "yyyyMMdd",
-
-            java.util.Locale.getDefault()
-
-        ).format(java.util.Date())
-
-        val existing = dir.listFiles()
-
-            ?.map { it.name }
-
-            ?.filter {
-
-                it.startsWith("lgDrag_$today")
-
-            }
-
-            ?.size ?: 0
-
-        val number = String.format(
-
-            "%03d",
-
-            existing + 1
-
-        )
-
-        val file = File(
-
-            dir,
-
-            "lgDrag_${today}_$number.jpg"
-
-        )
-
-        FileOutputStream(file).use {
-
-            bitmap.compress(
-
-                Bitmap.CompressFormat.JPEG,
-
-                100,
-
-                it
-
+        val safeX =
+            x.coerceIn(
+                0,
+                bitmap.width - 1
             )
 
-        }
+        val safeY =
+            y.coerceIn(
+                0,
+                bitmap.height - 1
+            )
 
-        return file.absolutePath
+        val safeWidth =
+            width.coerceIn(
+                1,
+                bitmap.width - safeX
+            )
 
+        val safeHeight =
+            height.coerceIn(
+                1,
+                bitmap.height - safeY
+            )
+
+        return Bitmap.createBitmap(
+            bitmap,
+            safeX,
+            safeY,
+            safeWidth,
+            safeHeight
+        )
     }
+
+
+    fun saveBitmap(
+        context: Context,
+        bitmap: Bitmap
+    ): String {
+
+        val today =
+            SimpleDateFormat(
+                "yyyyMMdd",
+                Locale.getDefault()
+            ).format(Date())
+
+        val fileName =
+            "Pidem_${today}_" +
+                    System.currentTimeMillis() +
+                    ".jpg"
+
+        val destination =
+            PidemStorage.createImageFile(
+                context,
+                fileName
+            )
+                ?: throw IllegalStateException(
+                    "No se ha seleccionado una carpeta de almacenamiento"
+                )
+
+        context.contentResolver
+            .openOutputStream(destination.uri)
+            ?.use { output ->
+
+                bitmap.compress(
+                    Bitmap.CompressFormat.JPEG,
+                    100,
+                    output
+                )
+
+            }
+            ?: throw IllegalStateException(
+                "No se pudo guardar la fotografía"
+            )
+
+        return destination.uri.toString()
+    }
+
 
     fun processCrop(
 
-    context: Context,
+        context: Context,
 
-    bitmap: Bitmap,
+        bitmap: Bitmap,
 
-    cropArea: CropArea
+        cropArea: CropArea
 
     ): String {
 
-        val croppedBitmap = cropBitmap(
+        val croppedBitmap =
+            cropBitmap(
 
-            bitmap = bitmap,
+                bitmap = bitmap,
 
-            imageLeft = cropArea.imageLeft,
-            imageTop = cropArea.imageTop,
-            imageRight = cropArea.imageRight,
-            imageBottom = cropArea.imageBottom,
+                imageLeft = cropArea.imageLeft,
+                imageTop = cropArea.imageTop,
+                imageRight = cropArea.imageRight,
+                imageBottom = cropArea.imageBottom,
 
-            cropLeft = cropArea.cropLeft,
-            cropTop = cropArea.cropTop,
-            cropRight = cropArea.cropRight,
-            cropBottom = cropArea.cropBottom
+                cropLeft = cropArea.cropLeft,
+                cropTop = cropArea.cropTop,
+                cropRight = cropArea.cropRight,
+                cropBottom = cropArea.cropBottom
 
-        )
+            )
 
         return saveBitmap(
-
             context,
-
             croppedBitmap
-
         )
-
     }
-
 }

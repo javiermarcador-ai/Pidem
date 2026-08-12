@@ -20,7 +20,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.material3.AlertDialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import es.fotoindex.app.viewmodel.PhotoViewModel
-import androidx.core.content.FileProvider
 import java.io.File
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.ui.focus.FocusRequester
@@ -669,11 +668,7 @@ fun DocumentScreen(
                                 val firstFile = File(photo.firstPhoto)
 
                                 uris.add(
-                                    FileProvider.getUriForFile(
-                                        context,
-                                        "${context.packageName}.provider",
-                                        firstFile
-                                    )
+                                    android.net.Uri.parse(photo.firstPhoto)
                                 )
 
                                 photo.secondPhoto?.let { secondPath ->
@@ -681,11 +676,7 @@ fun DocumentScreen(
                                     val secondFile = File(secondPath)
 
                                     uris.add(
-                                        FileProvider.getUriForFile(
-                                            context,
-                                            "${context.packageName}.provider",
-                                            secondFile
-                                        )
+                                        android.net.Uri.parse(secondPath)
                                     )
 
                                 }
@@ -712,13 +703,9 @@ fun DocumentScreen(
 
                                 attachments.forEach { attachment ->
 
-                                    val file = File(attachment.imagePath)
-
                                     uris.add(
-                                        FileProvider.getUriForFile(
-                                            context,
-                                            "${context.packageName}.provider",
-                                            file
+                                        android.net.Uri.parse(
+                                            attachment.imagePath
                                         )
                                     )
 
@@ -832,18 +819,16 @@ private fun openPhotoExternally(
     photoPath: String
 ) {
 
-    val file = File(photoPath)
+    val uri = android.net.Uri.parse(photoPath)
 
-    val uri = FileProvider.getUriForFile(
-        context,
-        "${context.packageName}.provider",
-        file
-    )
+    val intent = Intent(
+        Intent.ACTION_VIEW
+    ).apply {
 
-    val intent = Intent().apply {
-
-        action = Intent.ACTION_VIEW
-        setDataAndType(uri, "image/jpeg")
+        setDataAndType(
+            uri,
+            "image/*"
+        )
 
         addFlags(
             Intent.FLAG_GRANT_READ_URI_PERMISSION
@@ -854,14 +839,18 @@ private fun openPhotoExternally(
         )
     }
 
-    android.util.Log.d(
-        "OPEN_PHOTO",
-        "Abriendo: $uri"
-    )
+    try {
 
+        context.startActivity(intent)
 
-    context.startActivity(intent)
+    } catch (e: Exception) {
 
+        android.widget.Toast.makeText(
+            context,
+            "No hay ninguna aplicación para visualizar esta imagen",
+            android.widget.Toast.LENGTH_LONG
+        ).show()
 
-
+        e.printStackTrace()
+    }
 }

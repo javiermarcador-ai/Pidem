@@ -81,6 +81,8 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("com.vanniktech:android-image-cropper:4.6.0")
 
+    implementation(libs.androidx.documentfile)
+
 
     testImplementation(libs.junit)
 
@@ -91,6 +93,5 @@ dependencies {
 
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
-
 
 }

@@ -5,23 +5,31 @@ import android.net.Uri
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
-import java.io.File
 
 object OcrManager {
 
     fun extractText(
+
         context: Context,
+
         imagePath: String,
+
         onSuccess: (String) -> Unit,
+
         onError: (Exception) -> Unit
+
     ) {
 
         try {
 
-            val image = InputImage.fromFilePath(
-                context,
-                Uri.fromFile(File(imagePath))
-            )
+            val uri =
+                Uri.parse(imagePath)
+
+            val image =
+                InputImage.fromFilePath(
+                    context,
+                    uri
+                )
 
             val recognizer =
                 TextRecognition.getClient(
@@ -29,11 +37,15 @@ object OcrManager {
                 )
 
             recognizer.process(image)
+
                 .addOnSuccessListener { visionText ->
 
-                    onSuccess(visionText.text)
+                    onSuccess(
+                        visionText.text
+                    )
 
                 }
+
                 .addOnFailureListener {
 
                     onError(it)
@@ -47,5 +59,4 @@ object OcrManager {
         }
 
     }
-
 }
