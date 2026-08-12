@@ -62,7 +62,7 @@ fun HomeScreen(
         )
 
         Text(
-            text = "Lagoart'26-©",
+            text = "Lagoart '74-©   2026",
             fontSize = 10.sp,
             fontStyle = FontStyle.Italic
         )
@@ -95,7 +95,7 @@ fun HomeScreen(
 
         // Separación antes de Documentos
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(6.dp))
 
         Button(
             modifier = Modifier.fillMaxWidth(),

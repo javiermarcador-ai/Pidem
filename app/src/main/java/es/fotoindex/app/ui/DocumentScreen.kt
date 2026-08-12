@@ -41,7 +41,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import es.fotoindex.app.data.CaptureSessionState
 import androidx.compose.ui.Alignment
-
+import androidx.compose.material3.Checkbox
 
 @Composable
 fun DocumentScreen(
@@ -112,6 +112,23 @@ fun DocumentScreen(
     var showDeleteDialog by remember {
         mutableStateOf(false)
     }
+
+    var showShareDialog by remember {
+        mutableStateOf(false)
+    }
+
+    var shareMainPhotos by remember {
+        mutableStateOf(true)
+    }
+
+    var shareNotes by remember {
+        mutableStateOf(false)
+    }
+
+    var shareAdditionalPhotos by remember {
+        mutableStateOf(false)
+    }
+
 
     var showAddPhotoDialog by remember {
         mutableStateOf(false)
@@ -187,86 +204,17 @@ fun DocumentScreen(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
 
+
+
             Button(
                 modifier = Modifier.weight(1f),
                 onClick = {
-
-    /*                android.util.Log.d(
-                        "SHARE_TEST",
-                        "firstPhoto=${photo.firstPhoto}"
-                    )
-
-                    android.util.Log.d(
-                        "SHARE_TEST",
-                        "firstExists=${File(photo.firstPhoto).exists()}"
-                    )
-*/
-                    val uris = ArrayList<android.net.Uri>()
-                    val firstFile = File(photo.firstPhoto)
-
-                    uris.add(
-                        FileProvider.getUriForFile(
-                            context,
-                            "${context.packageName}.provider",
-                            firstFile
-                        )
-                    )
-
-                    photo.secondPhoto?.let {
-
-                        val secondFile = File(it)
-
-                        uris.add(
-                            FileProvider.getUriForFile(
-                                context,
-                                "${context.packageName}.provider",
-                                secondFile
-                            )
-                        )
-
-                    }
-
-                    val intent =
-                        if (uris.size == 1) {
-
-                            Intent(Intent.ACTION_SEND).apply {
-
-                                type = "image/jpeg"
-
-                                putExtra(Intent.EXTRA_STREAM, uris[0])
-
-                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-
-                            }
-
-                        } else {
-
-                            Intent(Intent.ACTION_SEND_MULTIPLE).apply {
-
-                                type = "image/jpeg"
-
-                                putParcelableArrayListExtra(
-                                    Intent.EXTRA_STREAM,
-                                    uris
-                                )
-
-                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-
-                            }
-
-                        }
-
-                    context.startActivity(
-                        Intent.createChooser(
-                            intent,
-                            "Compartir fotografías"
-                        )
-                    )
-
+                    showShareDialog = true
                 }
             ) {
                 Text("Compartir")
             }
+
 
             Button(
                 modifier = Modifier.weight(1f),
@@ -367,16 +315,6 @@ fun DocumentScreen(
                         contentDescription = null,
                         modifier = Modifier
                             .size(120.dp)
-                            /*.clickable {
-
-                                openPhotoExternally(
-                                    context,
-                                    attachment.imagePath
-                                )
-
-                            },
-                            */
-
                             .clickable {
 
                                 selectedAttachment = attachment
@@ -650,6 +588,242 @@ fun DocumentScreen(
             }
         )
     }
+
+    if (showShareDialog) {
+
+        AlertDialog(
+
+            onDismissRequest = {
+                showShareDialog = false
+            },
+
+            title = {
+                Text("Compartir documento")
+            },
+
+            text = {
+
+                Column {
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+
+                        Checkbox(
+                            checked = shareMainPhotos,
+                            onCheckedChange = {
+                                shareMainPhotos = it
+                            }
+                        )
+
+                        Text("Primera y segunda foto")
+
+                    }
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+
+                        Checkbox(
+                            checked = shareNotes,
+                            onCheckedChange = {
+                                shareNotes = it
+                            }
+                        )
+
+                        Text("Notas")
+
+                    }
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+
+                        Checkbox(
+                            checked = shareAdditionalPhotos,
+                            onCheckedChange = {
+                                shareAdditionalPhotos = it
+                            }
+                        )
+
+                        Text("Fotos adicionales")
+
+                    }
+
+                }
+
+            },
+
+            confirmButton = {
+
+                Button(
+                    onClick = {
+
+                        showShareDialog = false
+
+                        val uris = ArrayList<android.net.Uri>()
+
+                        val shareText = buildString {
+
+                            if (shareMainPhotos) {
+                                val firstFile = File(photo.firstPhoto)
+
+                                uris.add(
+                                    FileProvider.getUriForFile(
+                                        context,
+                                        "${context.packageName}.provider",
+                                        firstFile
+                                    )
+                                )
+
+                                photo.secondPhoto?.let { secondPath ->
+
+                                    val secondFile = File(secondPath)
+
+                                    uris.add(
+                                        FileProvider.getUriForFile(
+                                            context,
+                                            "${context.packageName}.provider",
+                                            secondFile
+                                        )
+                                    )
+
+                                }
+
+                            }
+
+                            if (shareNotes) {
+
+                                if (isNotEmpty()) {
+                                    append("\n\n")
+                                }
+
+                                append("Notas")
+                                append("\n\n")
+                                append(notes)
+
+                            }
+
+                            if (shareAdditionalPhotos && attachments.isNotEmpty()) {
+
+                                if (isNotEmpty()) {
+                                    append("\n\n")
+                                }
+
+                                attachments.forEach { attachment ->
+
+                                    val file = File(attachment.imagePath)
+
+                                    uris.add(
+                                        FileProvider.getUriForFile(
+                                            context,
+                                            "${context.packageName}.provider",
+                                            file
+                                        )
+                                    )
+
+                                }
+
+                            }
+
+                        }
+
+
+                        if (uris.isEmpty() && shareText.isBlank()) {
+
+                            android.widget.Toast.makeText(
+                                context,
+                                "Seleccione al menos un elemento",
+                                android.widget.Toast.LENGTH_SHORT
+                            ).show()
+
+                            return@Button
+                        }
+
+                        if (uris.isEmpty()) {
+
+                            val intent = Intent(Intent.ACTION_SEND).apply {
+
+                                type = "text/plain"
+
+                                putExtra(
+                                    Intent.EXTRA_TEXT,
+                                    shareText
+                                )
+
+                            }
+
+                            context.startActivity(
+                                Intent.createChooser(
+                                    intent,
+                                    "Compartir documento"
+                                )
+                            )
+
+                        } else {
+
+                            val intent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+
+                                type = "image/jpeg"
+
+                                putParcelableArrayListExtra(
+                                    Intent.EXTRA_STREAM,
+                                    uris
+                                )
+
+                                if (shareText.isNotBlank()) {
+
+                                    putExtra(
+                                        Intent.EXTRA_TEXT,
+                                        shareText
+                                    )
+
+                                }
+
+                                addFlags(
+                                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                )
+
+                            }
+
+                            context.startActivity(
+                                Intent.createChooser(
+                                    intent,
+                                    "Compartir documento"
+                                )
+                            )
+
+                        }
+
+                    }
+                ) {
+                    Text("Compartir")
+                }
+
+            },
+
+
+
+
+            dismissButton = {
+
+                Button(
+                    onClick = {
+                        showShareDialog = false
+                    }
+                ) {
+                    Text("Cancelar")
+                }
+
+            }
+
+        )
+
+    }
+
+
+
+
 
 }
 
