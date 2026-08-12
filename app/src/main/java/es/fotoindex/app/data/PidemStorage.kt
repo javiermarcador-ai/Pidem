@@ -55,21 +55,33 @@ object PidemStorage {
     }
 
     /**
-     * Carpeta que Android propondrá inicialmente
-     * cuando Pidem solicite al usuario elegir
-     * dónde almacenar sus fotografías.
+     * URI que Android propondrá inicialmente
+     * al usuario cuando Pidem solicite
+     * seleccionar la carpeta de almacenamiento.
      *
-     * Por defecto: Almacenamiento interno / Imágenes
-     * (Pictures en Android).
+     * Actualmente:
+     * Almacenamiento interno / Imágenes
      */
-    fun getDefaultFolderUri(): Uri {
+    fun getDefaultFolderUri(
+        context: Context
+    ): Uri {
+
+        val path =
+            context.getString(
+                es.fotoindex.app.R.string.pidem_default_storage_path
+            )
 
         return DocumentsContract.buildTreeDocumentUri(
             "com.android.externalstorage.documents",
-            "primary:Pictures"
+            path
         )
     }
 
+    /**
+     * Obtiene o crea la carpeta Pidem
+     * dentro de la carpeta que el usuario
+     * haya autorizado.
+     */
     fun getPidemFolder(
         context: Context
     ): DocumentFile? {
@@ -99,6 +111,10 @@ object PidemStorage {
         return pidemFolder
     }
 
+    /**
+     * Crea una fotografía dentro de
+     * la carpeta Pidem.
+     */
     fun createImageFile(
         context: Context,
         fileName: String

@@ -1,3 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
+
     <string name="app_name">Pidem</string>
+
+    <!-- Ubicación que Android propondrá inicialmente -->
+    <string name="pidem_default_storage_path">primary:Pictures</string>
+
 </resources>

@@ -295,15 +295,28 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
             Button(
                 modifier = Modifier.fillMaxWidth(),
                 onClick = {
-                    session = session.copy(
-                        previewPhotoPath = null,
-                        reviewingPhoto = false
-                    )
+
+                    if (session.source == CaptureSource.GALLERY) {
+                        // La fotografía actual procede de la galería.
+                        // Volvemos a abrir el selector para elegir otra.
+                        session = session.copy(
+                            previewPhotoPath = null,
+                            reviewingPhoto = false
+                        )
+                        galleryLauncher.launch("image/*")
+                    } else {
+                        // La fotografía actual procede de la cámara.
+                        // Volvemos al visor de la cámara.
+                        session = session.copy(
+                            previewPhotoPath = null,
+                            reviewingPhoto = false
+                        )
+                        es.fotoindex.app.image.ImageProvider.source =
+                            es.fotoindex.app.image.ImageSource.CAMERA
+                    }
                 }
             ) {
-
                 Text("🔄 Repetir fotografía")
-
             }
 
             Spacer(modifier = Modifier.height(10.dp))
