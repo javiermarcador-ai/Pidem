@@ -36,6 +36,9 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
 
     var session by remember {mutableStateOf(CaptureSession())  }
 
+    var galleryCancelled by remember {
+        mutableStateOf(false)
+    }
 
     var hasCameraPermission by remember {
         mutableStateOf(
@@ -58,7 +61,13 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
             GetContent()
         ) { uri: Uri? ->
 
-            if (uri != null) {
+            if (uri == null) {
+
+                galleryCancelled = true
+
+            } else {
+
+                galleryCancelled = false
 
                 CameraPreview.copyGalleryImage(
                     context = context,
@@ -224,55 +233,62 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
             Button(
                 modifier = Modifier.fillMaxWidth(),
                 onClick = {
-                    CameraPreview.takePhoto(context) { photoPath ->
-                        OcrPipeline.process(
-                            context = context,
-                            imagePath = photoPath,
-                            onSuccess = { text ->
+                    if (galleryCancelled) {
 
-                                session = if (session.reviewingFirstPhoto) {
+                        navController.popBackStack()
 
-                                    session.copy(
-                                        previewPhotoPath = photoPath,
-                                        reviewingPhoto = true,
-                                        firstOcrText = text
-                                    )
+                    } else {
 
-                                } else {
+                        CameraPreview.takePhoto(context) { photoPath ->
+                            OcrPipeline.process(
+                                context = context,
+                                imagePath = photoPath,
+                                onSuccess = { text ->
 
-                                    session.copy(
-                                        previewPhotoPath = photoPath,
-                                        reviewingPhoto = true,
-                                        secondOcrText = text
-                                    )
+                                    session = if (session.reviewingFirstPhoto) {
 
-                                }
-                            },
+                                        session.copy(
+                                            previewPhotoPath = photoPath,
+                                            reviewingPhoto = true,
+                                            firstOcrText = text
+                                        )
+
+                                    } else {
+
+                                        session.copy(
+                                            previewPhotoPath = photoPath,
+                                            reviewingPhoto = true,
+                                            secondOcrText = text
+                                        )
+
+                                    }
+                                },
 
 
-                            onError = {
+                                onError = {
 
-                                session = if (session.reviewingFirstPhoto) {
+                                    session = if (session.reviewingFirstPhoto) {
 
-                                    session.copy(
-                                        previewPhotoPath = photoPath,
-                                        reviewingPhoto = true,
-                                        firstOcrText = ""
-                                    )
+                                        session.copy(
+                                            previewPhotoPath = photoPath,
+                                            reviewingPhoto = true,
+                                            firstOcrText = ""
+                                        )
 
-                                } else {
+                                    } else {
 
-                                    session.copy(
-                                        previewPhotoPath = photoPath,
-                                        reviewingPhoto = true,
-                                        secondOcrText = ""
-                                    )
+                                        session.copy(
+                                            previewPhotoPath = photoPath,
+                                            reviewingPhoto = true,
+                                            secondOcrText = ""
+                                        )
 
-                                }
+                                    }
 
-                            },
+                                },
 
-                        )
+                                )
+                        }
 
                     }
 
@@ -280,7 +296,9 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
             ) {
 
                 Text(
-                    if (CaptureSessionState.additionalPhotoDocumentId != null) {
+                    if (galleryCancelled) {
+                        "Cerrar"
+                    } else if (CaptureSessionState.additionalPhotoDocumentId != null) {
                         "Tomar fotografía"
                     } else if (session.reviewingFirstPhoto) {
                         "Tomar primera fotografía"

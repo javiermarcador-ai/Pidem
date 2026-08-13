@@ -107,7 +107,7 @@ fun ReviewScreen(
 
                 android.widget.Toast.makeText(
                     context,
-                    "He pulsado Guardar",
+                    "Ha pulsado Guardar",
                     android.widget.Toast.LENGTH_SHORT
                 ).show()
 
