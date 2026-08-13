@@ -667,32 +667,21 @@ fun DocumentScreen(
                             if (shareMainPhotos) {
                                 val firstFile = File(photo.firstPhoto)
 
-                                uris.add(
-                                    android.net.Uri.parse(photo.firstPhoto)
-                                )
-
+                                uris.add(android.net.Uri.parse(photo.firstPhoto))
                                 photo.secondPhoto?.let { secondPath ->
-
                                     val secondFile = File(secondPath)
-
-                                    uris.add(
-                                        android.net.Uri.parse(secondPath)
-                                    )
-
+                                    uris.add(android.net.Uri.parse(secondPath))
                                 }
 
                             }
 
                             if (shareNotes) {
-
                                 if (isNotEmpty()) {
                                     append("\n\n")
                                 }
-
                                 append("Notas")
                                 append("\n\n")
                                 append(notes)
-
                             }
 
                             if (shareAdditionalPhotos && attachments.isNotEmpty()) {
@@ -708,36 +697,26 @@ fun DocumentScreen(
                                             attachment.imagePath
                                         )
                                     )
-
                                 }
-
                             }
-
                         }
 
-
                         if (uris.isEmpty() && shareText.isBlank()) {
-
                             android.widget.Toast.makeText(
                                 context,
                                 "Seleccione al menos un elemento",
                                 android.widget.Toast.LENGTH_SHORT
                             ).show()
-
                             return@Button
                         }
 
                         if (uris.isEmpty()) {
-
                             val intent = Intent(Intent.ACTION_SEND).apply {
-
                                 type = "text/plain"
-
                                 putExtra(
                                     Intent.EXTRA_TEXT,
                                     shareText
                                 )
-
                             }
 
                             context.startActivity(

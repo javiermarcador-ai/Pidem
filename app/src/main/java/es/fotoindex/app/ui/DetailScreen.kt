@@ -35,8 +35,6 @@ import es.fotoindex.app.data.DetailState
 import androidx.compose.foundation.layout.Arrangement
 import android.content.Intent
 import android.net.Uri
-import androidx.core.content.FileProvider
-import java.io.File
 import androidx.compose.ui.platform.LocalContext
 
 
@@ -66,6 +64,10 @@ fun DetailScreen(onOpenDocument: (Long) -> Unit) {
 
     var selectedIds by remember {
         mutableStateOf(setOf<Long>())
+    }
+
+    var selectAll by remember {
+        mutableStateOf(false)
     }
 
     var photoToDelete by remember {
@@ -148,6 +150,16 @@ fun DetailScreen(onOpenDocument: (Long) -> Unit) {
 
         if (selectedIds.isNotEmpty()) {
 
+            Spacer(Modifier.height(8.dp))
+
+            // Línea superior del bloque de acciones
+            androidx.compose.material3.HorizontalDivider(
+                modifier = Modifier.padding(horizontal = 8.dp)
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            // Botones de acciones
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -159,70 +171,80 @@ fun DetailScreen(onOpenDocument: (Long) -> Unit) {
                     modifier = Modifier.weight(1f),
                     onClick = {
 
-                        val uris = ArrayList<android.net.Uri>()
+                        val uris =
+                            ArrayList<android.net.Uri>()
 
                         viewModel.photos
                             .filter { it.id in selectedIds }
                             .forEach { photo ->
 
-                                val firstFile = File(photo.firstPhoto)
-
-                                if (firstFile.exists()) {
-
-                                    uris.add(
-                                        FileProvider.getUriForFile(
-                                            context,
-                                            "${context.packageName}.provider",
-                                            firstFile
-                                        )
+                                // Primera fotografía
+                                val firstUri =
+                                    android.net.Uri.parse(
+                                        photo.firstPhoto
                                     )
 
-                                }
+                                uris.add(firstUri)
 
+                                // Segunda fotografía
                                 photo.secondPhoto?.let { secondPath ->
 
-                                    val secondFile = File(secondPath)
-
-                                    if (secondFile.exists()) {
-
-                                        uris.add(
-                                            FileProvider.getUriForFile(
-                                                context,
-                                                "${context.packageName}.provider",
-                                                secondFile
-                                            )
+                                    val secondUri =
+                                        android.net.Uri.parse(
+                                            secondPath
                                         )
 
-                                    }
-
+                                    uris.add(secondUri)
                                 }
-
                             }
 
                         if (uris.isNotEmpty()) {
 
-                            val intent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+                            val intent =
+                                Intent(
+                                    Intent.ACTION_SEND_MULTIPLE
+                                ).apply {
 
-                                type = "image/jpeg"
+                                    type = "image/jpeg"
 
-                                putParcelableArrayListExtra(
-                                    Intent.EXTRA_STREAM,
-                                    uris
+                                    putParcelableArrayListExtra(
+                                        Intent.EXTRA_STREAM,
+                                        uris
+                                    )
+
+                                    addFlags(
+                                        Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                    )
+                                }
+
+                            try {
+
+                                context.startActivity(
+                                    Intent.createChooser(
+                                        intent,
+                                        "Compartir fotografías"
+                                    )
                                 )
 
-                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            } catch (e: Exception) {
 
+                                android.widget.Toast.makeText(
+                                    context,
+                                    "No se pudieron compartir las fotografías",
+                                    android.widget.Toast.LENGTH_SHORT
+                                ).show()
+
+                                e.printStackTrace()
                             }
 
-                            context.startActivity(
-                                Intent.createChooser(
-                                    intent,
-                                    "Compartir fotografías"
-                                )
-                            )
+                        } else {
 
+                            android.widget.Toast.makeText(
+                                context,
+                                "No se encontraron fotografías a compartir",
+                                android.widget.Toast.LENGTH_SHORT
+                            ).show()
                         }
-
                     }
                 ) {
                     Text("Compartir")
@@ -236,8 +258,47 @@ fun DetailScreen(onOpenDocument: (Long) -> Unit) {
                 ) {
                     Text("Borrar todas")
                 }
-
             }
+
+            Spacer(Modifier.height(4.dp))
+
+            // Seleccionar todas
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+
+                Checkbox(
+                    checked =
+                        viewModel.photos.isNotEmpty() &&
+                                selectedIds.size == viewModel.photos.size,
+
+                    onCheckedChange = { checked ->
+
+                        selectedIds =
+                            if (checked) {
+                                viewModel.photos
+                                    .map { it.id }
+                                    .toSet()
+                            } else {
+                                emptySet()
+                            }
+                    }
+                )
+
+                Text("Seleccionar todas")
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            // Línea inferior del bloque de acciones
+            androidx.compose.material3.HorizontalDivider(
+                modifier = Modifier.padding(horizontal = 8.dp)
+            )
+
+            Spacer(Modifier.height(8.dp))
         }
 
 
@@ -305,6 +366,12 @@ fun DetailScreen(onOpenDocument: (Long) -> Unit) {
                                     } else {
                                         selectedIds - photo.id
                                     }
+
+                                selectAll =
+                                    selectedIds.isNotEmpty() &&
+                                            selectedIds.containsAll(
+                                                viewModel.photos.map { it.id }
+                                            )
 
                             }
                         )
@@ -414,6 +481,7 @@ fun DetailScreen(onOpenDocument: (Long) -> Unit) {
                     onClick = {
                         viewModel.deletePhotos(selectedIds)
                         selectedIds = emptySet()
+                        selectAll = false
                         showMultipleDeleteDialog = false
                     }
                 ) {

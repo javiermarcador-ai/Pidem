@@ -5,6 +5,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -36,6 +37,24 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import es.fotoindex.app.data.PidemStorage
 import es.fotoindex.app.viewmodel.PhotoViewModel
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.ui.res.painterResource
+import es.fotoindex.app.R
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.size
+import android.content.Intent
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withStyle
+
 
 @Composable
 fun HomeScreen(
@@ -61,6 +80,11 @@ fun HomeScreen(
         )
     }
 
+    var showAboutDialog by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+
     /*
      * Selector de carpetas de Android.
      *
@@ -68,7 +92,6 @@ fun HomeScreen(
      * Android devuelve la URI REAL sobre la que
      * el usuario ha concedido permiso.
      */
-
     val folderPickerLauncher =
         rememberLauncherForActivityResult(
             contract =
@@ -104,25 +127,46 @@ fun HomeScreen(
 
     ) {
 
-        Spacer(
-            modifier = Modifier.height(12.dp)
-        )
+        Spacer(modifier = Modifier.height(12.dp))
 
-        Text(
-            text = "Pidem",
-            style =
-                MaterialTheme.typography.headlineLarge
-        )
+        Box(
+            modifier = Modifier.fillMaxWidth()
+        ) {
 
-        Text(
-            text = "Lagoart '74-©   2026",
-            fontSize = 10.sp,
-            fontStyle = FontStyle.Italic
-        )
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
 
-        Spacer(
-            modifier = Modifier.height(24.dp)
-        )
+                Text(
+                    text = "Pidem",
+                    style = MaterialTheme.typography.headlineLarge
+                )
+
+                Text(
+                    text = "Lagoart® '74, 2026",
+                    fontSize = 10.sp,
+                    fontStyle = FontStyle.Italic
+                )
+            }
+
+            IconButton(
+                onClick = {
+                    showAboutDialog = true
+                },
+                modifier = Modifier.align(Alignment.TopEnd)
+            ) {
+                Image(
+                    painter = painterResource(
+                        id = R.drawable.pidem_about
+                    ),
+                    contentDescription = "Información sobre Pidem",
+                    modifier = Modifier.size(48.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
 
         /*
          * Capturar + Galería
@@ -282,11 +326,11 @@ fun HomeScreen(
     }
 
     /*
-     * PRIMER ARRANQUE
-     *
-     * Este diálogo no permite cerrarse sin
-     * seleccionar una carpeta.
-     */
+   * PRIMER ARRANQUE
+   *
+   * Este diálogo no permite cerrarse sin
+   * seleccionar una carpeta.
+   */
     if (showStorageDialog) {
 
         AlertDialog(
@@ -335,6 +379,113 @@ fun HomeScreen(
                     Text(
                         "Seleccionar carpeta"
                     )
+                }
+            }
+        )
+    }
+
+
+    /*
+     * INFORMACIÓN SOBRE PIDEM
+     */
+    if (showAboutDialog) {
+
+        AlertDialog(
+
+            onDismissRequest = {
+                showAboutDialog = false
+            },
+
+            title = {
+
+                Text(
+                    text = "Pidem",
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.headlineSmall
+                )
+            },
+
+            text = {
+
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+
+                    Text(
+                        text = buildAnnotatedString {
+                            append("Desarrollado por ")
+                            withStyle(
+                                SpanStyle(fontWeight = FontWeight.Bold),
+                            ) {
+                                append("Lagoart® '74")
+                            }
+                            append(" Agosto 2026")
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(
+                        modifier = Modifier.height(24.dp)
+                    )
+
+                    Text(
+                        text = "Si descubriste algún error o quieres proponer " +
+                                "alguna mejora, escríbeme a:",
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Start
+                    )
+
+                    Spacer(
+                        modifier = Modifier.height(12.dp)
+                    )
+
+                    Text(
+                        text = "javier.marcador@gmail.com",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+
+                                val intent = Intent(
+                                    Intent.ACTION_SENDTO
+                                ).apply {
+
+                                    data = android.net.Uri.parse(
+                                        "mailto:javier.marcador@gmail.com"
+                                    )
+                                }
+
+                                try {
+
+                                    context.startActivity(intent)
+
+                                } catch (e: Exception) {
+
+                                    android.widget.Toast.makeText(
+                                        context,
+                                        "No hay ninguna aplicación de correo configurada",
+                                        android.widget.Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            },
+                        textAlign = TextAlign.Center,
+                        color = Color(0xFF6A5ACD),
+                        fontStyle = FontStyle.Italic,
+                        textDecoration = TextDecoration.Underline
+                    )
+                }
+            },
+
+            confirmButton = {
+
+                TextButton(
+                    onClick = {
+                        showAboutDialog = false
+                    }
+                ) {
+
+                    Text("Cerrar")
                 }
             }
         )
