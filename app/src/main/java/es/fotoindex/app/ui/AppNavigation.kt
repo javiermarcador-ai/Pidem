@@ -1,18 +1,21 @@
 package es.fotoindex.app.ui
 
 import androidx.compose.runtime.Composable
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import es.fotoindex.app.data.ReviewData
 import es.fotoindex.app.data.DetailState
 import es.fotoindex.app.data.CaptureSessionState
-
+import es.fotoindex.app.viewmodel.PhotoViewModel
 
 @Composable
 fun AppNavigation() {
 
     val navController = rememberNavController()
+
+    val photoViewModel: PhotoViewModel = viewModel()
 
     NavHost(
         navController = navController,
@@ -22,54 +25,109 @@ fun AppNavigation() {
         composable(AppScreen.Home.route) {
 
             HomeScreen(
-                onCaptureClick = {
 
-                    CaptureSessionState.firstPhotoFromGallery = false
+                onCaptureClick = { selectedCategory ->
 
-                    es.fotoindex.app.image.ImageProvider.source =
-                        es.fotoindex.app.image.ImageSource.CAMERA
+                    if (selectedCategory == "Todas") {
 
-                    navController.navigate(AppScreen.Camera.route)
+                        android.widget.Toast.makeText(
+                            navController.context,
+                            "Seleccione una categoría antes de añadir imágenes",
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
 
+                    } else {
+
+                        CaptureSessionState.selectedCategory =
+                            selectedCategory
+
+                        CaptureSessionState.firstPhotoFromGallery = false
+
+                        es.fotoindex.app.image.ImageProvider.source =
+                            es.fotoindex.app.image.ImageSource.CAMERA
+
+                        navController.navigate(
+                            AppScreen.Camera.route
+                        )
+                    }
                 },
 
-                onSearchClick = {
+
+                onSearchClick = { selectedCategory ->
+
                     DetailState.searchText = ""
                     DetailState.searchInNotes = true
-                    navController.navigate(AppScreen.Detail.route)
+                    DetailState.selectedCategory =
+                        selectedCategory
+
+                    navController.navigate(
+                        AppScreen.Detail.route
+                    )
                 },
 
                 onExportClick = {
-                    navController.navigate(AppScreen.Settings.route)
+
+                    navController.navigate(
+                        AppScreen.Settings.route
+                    )
                 },
 
                 onSettingsClick = {
-                    navController.navigate(AppScreen.Settings.route)
+
+                    navController.navigate(
+                        AppScreen.Settings.route
+                    )
                 },
 
-                onGalleryClick = {
+                onGalleryClick = { selectedCategory ->
 
-                    CaptureSessionState.firstPhotoFromGallery = true
+                    if (selectedCategory == "Todas") {
 
-                    es.fotoindex.app.image.ImageProvider.source =
-                        es.fotoindex.app.image.ImageSource.GALLERY
+                        android.widget.Toast.makeText(
+                            navController.context,
+                            "Seleccione una categoría antes de añadir imágenes",
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
 
-                    navController.navigate(AppScreen.Camera.route)
+                    } else {
 
+                        CaptureSessionState.selectedCategory =
+                            selectedCategory
+
+                        CaptureSessionState.firstPhotoFromGallery = true
+
+                        es.fotoindex.app.image.ImageProvider.source =
+                            es.fotoindex.app.image.ImageSource.GALLERY
+
+                        navController.navigate(
+                            AppScreen.Camera.route
+                        )
+                    }
+                },
+
+
+                onCategoriesClick = {
+                    navController.navigate(
+                        AppScreen.Categories.route
+                    )
                 },
 
 
                 onOpenDocument = {
-                    navController.navigate(AppScreen.Document.route)
+
+                    navController.navigate(
+                        AppScreen.Document.route
+                    )
                 }
             )
         }
 
         composable(AppScreen.Camera.route) {
-            CameraScreen(navController)
+
+            CameraScreen(
+                navController
+            )
         }
-
-
 
         composable(AppScreen.Review.route) {
 
@@ -81,14 +139,9 @@ fun AppNavigation() {
                         AppScreen.Home.route,
                         false
                     )
-
                 }
-
             )
-
         }
-
-
 
         composable(AppScreen.Detail.route) {
 
@@ -96,12 +149,11 @@ fun AppNavigation() {
 
                 onOpenDocument = { id ->
 
-                    navController.navigate(AppScreen.Document.route)
-
+                    navController.navigate(
+                        AppScreen.Document.route
+                    )
                 }
-
             )
-
         }
 
         composable(AppScreen.Document.route) {
@@ -112,13 +164,27 @@ fun AppNavigation() {
                     navController.popBackStack()
                 }
             )
-
         }
 
         composable(AppScreen.Settings.route) {
-            SettingsScreen()
+            SettingsScreen(
+                onCategoriesClick = {
+                    navController.navigate(
+                        AppScreen.Categories.route
+                    )
+                }
+            )
         }
 
+
+        composable(AppScreen.Categories.route) {
+
+            CategoriesScreen(
+                onBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
 
 
     }

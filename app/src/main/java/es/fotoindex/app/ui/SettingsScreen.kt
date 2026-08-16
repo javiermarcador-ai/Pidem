@@ -15,7 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(onCategoriesClick: () -> Unit) {
 
     Column(
 
@@ -54,6 +54,15 @@ fun SettingsScreen() {
             }
         ) {
             Text("📥 Importar")
+        }
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        Button(
+            modifier = Modifier.fillMaxWidth(),
+            onClick = onCategoriesClick
+        ) {
+            Text("📂 Gestionar categorías")
         }
 
     }

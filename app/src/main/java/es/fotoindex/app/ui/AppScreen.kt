@@ -14,5 +14,6 @@ sealed class AppScreen(val route: String) {
 
     data object Settings : AppScreen("settings")
 
+    data object Categories : AppScreen("categories")
 
 }

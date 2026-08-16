@@ -9,20 +9,42 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import es.fotoindex.app.database.Category
+
+class PhotoViewModel(
+    application: Application
+) : AndroidViewModel(application) {
+
+    private val database =
+        DatabaseProvider.getDatabase(application)
+
+    private val repository =
+        PhotoRepository(
+            photoDao = database.photoDao(),
+            categoryDao = database.categoryDao()
+        )
+
+    val photos: SnapshotStateList<PhotoRecord> =
+        mutableStateListOf()
 
 
-class PhotoViewModel(application: Application): AndroidViewModel(application) {
 
-    private val repository = PhotoRepository(
+    /*
+     * CATEGORÍAS
+     */
 
+    val categories: SnapshotStateList<Category> =
+        mutableStateListOf()
 
-        DatabaseProvider
-            .getDatabase(application)
-            .photoDao()
+    var selectedCategory by mutableStateOf("Documentos")
 
-    )
-
-    val photos: SnapshotStateList<PhotoRecord> = mutableStateListOf()
+    /*
+     * Cargar fotografías
+     */
 
     fun loadPhotos() {
 
@@ -30,16 +52,71 @@ class PhotoViewModel(application: Application): AndroidViewModel(application) {
 
             photos.clear()
 
-            photos.addAll(
-                repository.getAll()
-            )
+            if (selectedCategory == "Todas") {
 
+                photos.addAll(
+                    repository.getAll()
+                )
+
+            } else {
+
+                photos.addAll(
+                    repository.getByCategory(
+                        selectedCategory
+                    )
+                )
+
+            }
 
         }
 
     }
 
-    fun deletePhoto(id: Long) {
+
+    /*
+     * Cargar categorías
+     *
+     * De momento mantenemos las categorías
+     * definidas en el propio documento.
+     *
+     * La gestión persistente de categorías
+     * la añadiremos en el siguiente paso.
+     */
+
+
+
+    /*
+     * Seleccionar categoría
+     */
+
+    fun selectCategory(category: String) {
+
+        /*
+         * "Todas" es solamente un filtro.
+         * No es una categoría que pueda asignarse
+         * a una fotografía.
+         */
+        if (
+            category != "Todas" &&
+            categories.none {
+                it.name == category
+            }
+        ) {
+            return
+        }
+
+        selectedCategory = category
+
+        loadPhotos()
+    }
+
+
+
+    /*     * Eliminar fotografía     */
+
+    fun deletePhoto(
+        id: Long
+    ) {
 
         viewModelScope.launch {
 
@@ -51,57 +128,179 @@ class PhotoViewModel(application: Application): AndroidViewModel(application) {
 
     }
 
-    fun deletePhotos(ids: Set<Long>) {
+
+    /*
+     * Eliminar varias fotografías
+     */
+
+    fun deletePhotos(
+        ids: Set<Long>
+    ) {
+
         viewModelScope.launch {
+
             ids.forEach { id ->
+
                 repository.delete(id)
+
             }
+
             loadPhotos()
+
         }
+
     }
 
-    fun updateNotes(
+
+    /*
+     * Modificar notas
+     */
+
+    fun updateNotesAndCategory(
         id: Long,
-        notes: String
+        notes: String,
+        category: String
     ) {
+
         viewModelScope.launch {
-            repository.updateNotes(
-                id,
-                notes
+
+            repository.updateNotesAndCategory(
+                id = id,
+                notes = notes,
+                category = category
             )
+
             loadPhotos()
+        }
+    }
+    suspend fun loadCategories() {
+
+        categories.clear()
+
+        val loadedCategories =
+            repository.getCategories()
+
+        if (
+            loadedCategories.none {
+                it.name.equals(
+                    "Documentos",
+                    ignoreCase = true
+                )
+            }
+        ) {
+
+            repository.insertCategory(
+                Category(
+                    name = "Documentos"
+                )
+            )
+        }
+
+        categories.addAll(
+            repository.getCategories()
+        )
+
+        if (
+            selectedCategory != "Todas" &&
+            categories.none {
+                it.name.equals(
+                    selectedCategory,
+                    ignoreCase = true
+                )
+            }
+        ) {
+
+            selectedCategory = "Documentos"
         }
     }
 
 
+    suspend fun loadCategoriesAndWait() {
+
+        categories.clear()
+
+        val loadedCategories =
+            repository.getCategories()
+
+        if (
+            loadedCategories.none {
+                it.name.equals(
+                    "Documentos",
+                    ignoreCase = true
+                )
+            }
+        ) {
+
+            repository.insertCategory(
+                Category(
+                    name = "Documentos"
+                )
+            )
+        }
+
+        categories.addAll(
+            repository.getCategories()
+        )
+
+        if (
+            selectedCategory != "Todas" &&
+            categories.none {
+                it.name.equals(
+                    selectedCategory,
+                    ignoreCase = true
+                )
+            }
+        ) {
+
+            selectedCategory = "Documentos"
+        }
+    }
+
+
+    /*
+     * Guardar fotografía
+     */
     fun savePhoto(
-
         firstPhoto: String,
-
         secondPhoto: String?,
-
         ocrText: String,
-
-        additionalText: String
-
+        additionalText: String,
+        category: String
     ) {
 
         viewModelScope.launch {
+
+            val finalCategory =
+                if (
+                    category == "Todas" ||
+                    category.isBlank()
+                ) {
+                    "Documentos"
+                } else {
+                    category
+                }
 
             val photo = PhotoRecord(
                 firstPhoto = firstPhoto,
                 secondPhoto = secondPhoto,
                 ocrText = ocrText,
                 additionalText = additionalText,
+                category = finalCategory,
                 createdAt = System.currentTimeMillis()
-
             )
+
             repository.insert(photo)
+
             loadPhotos()
-
         }
-
     }
+
+    /*
+     * Búsqueda
+     */
+
+
+
     fun search(
         text: String,
         searchInNotes: Boolean
@@ -113,23 +312,53 @@ class PhotoViewModel(application: Application): AndroidViewModel(application) {
 
             if (text.isBlank()) {
 
-                photos.addAll(
-                    repository.getAll()
-                )
-
-            } else {
-
-                if (searchInNotes) {
+                if (selectedCategory == "Todas") {
 
                     photos.addAll(
-                        repository.searchIncludingNotes(text)
+                        repository.getAll()
                     )
 
                 } else {
 
                     photos.addAll(
-                        repository.search(text)
+                        repository.getByCategory(
+                            selectedCategory
+                        )
                     )
+
+                }
+
+            } else {
+
+                if (selectedCategory == "Todas") {
+
+                    if (searchInNotes) {
+                        photos.addAll(repository.searchIncludingNotes(text))
+                    } else {
+                        photos.addAll(repository.search(text))
+                    }
+
+                } else {
+
+                    if (searchInNotes) {
+
+                        photos.addAll(
+                            repository.searchByCategoryIncludingNotes(
+                                selectedCategory,
+                                text
+                            )
+                        )
+
+                    } else {
+
+                        photos.addAll(
+                            repository.searchByCategory(
+                                selectedCategory,
+                                text
+                            )
+                        )
+
+                    }
 
                 }
 
@@ -139,6 +368,10 @@ class PhotoViewModel(application: Application): AndroidViewModel(application) {
 
     }
 
+
+    /*
+     * ADJUNTOS
+     */
 
     fun loadAttachments(
         photoId: Long,
@@ -150,12 +383,15 @@ class PhotoViewModel(application: Application): AndroidViewModel(application) {
             target.clear()
 
             target.addAll(
-                repository.getAttachments(photoId)
+                repository.getAttachments(
+                    photoId
+                )
             )
 
         }
 
     }
+
 
     fun addAttachment(
         photoId: Long,
@@ -167,8 +403,11 @@ class PhotoViewModel(application: Application): AndroidViewModel(application) {
             repository.insertAttachment(
 
                 es.fotoindex.app.database.PhotoAttachment(
+
                     photoId = photoId,
+
                     imagePath = imagePath
+
                 )
 
             )
@@ -176,6 +415,7 @@ class PhotoViewModel(application: Application): AndroidViewModel(application) {
         }
 
     }
+
 
     fun deleteAttachment(
         attachmentId: Long
@@ -192,6 +432,183 @@ class PhotoViewModel(application: Application): AndroidViewModel(application) {
     }
 
 
+    fun insertCategory(name: String) {
+
+        viewModelScope.launch {
+
+            repository.insertCategory(
+                Category(
+                    name = name
+                )
+            )
+
+            loadCategories()
+        }
+    }
+
+
+
+    fun updateCategory(
+        id: Long,
+        newName: String
+    ) {
+
+        viewModelScope.launch {
+
+            val currentCategory =
+                repository.getCategoryByName(
+                    "Documentos"
+                )
+
+            /*
+             * Documentos no se puede modificar.
+             */
+            if (
+                currentCategory != null &&
+                currentCategory.id == id
+            ) {
+                return@launch
+            }
+
+            val cleanName =
+                newName.trim()
+
+            /*
+             * No permitimos nombres vacíos
+             * ni nombres reservados.
+             */
+            if (
+                cleanName.isBlank() ||
+                cleanName.equals(
+                    "Todas",
+                    ignoreCase = true
+                ) ||
+                cleanName == "+"
+            ) {
+                return@launch
+            }
+
+            /*
+             * Evitamos duplicar categorías.
+             */
+            val existing =
+                repository.getCategoryByName(
+                    cleanName
+                )
+
+            if (
+                existing != null &&
+                existing.id != id
+            ) {
+                return@launch
+            }
+
+            repository.updateCategory(
+                Category(
+                    id = id,
+                    name = cleanName
+                )
+            )
+
+            loadCategories()
+        }
+    }
+
+
+    fun deleteCategory(id: Long) {
+
+        viewModelScope.launch {
+
+            val category =
+                repository.getCategories()
+                    .find { it.id == id }
+
+            /*
+             * Documentos nunca se puede borrar.
+             */
+            if (
+                category == null ||
+                category.name.equals(
+                    "Documentos",
+                    ignoreCase = true
+                )
+            ) {
+                return@launch
+            }
+
+            /*
+             * IMPORTANTE:
+             *
+             * NO modificamos las fotografías que
+             * pertenecían a esta categoría.
+             *
+             * Sus registros conservarán el nombre
+             * antiguo en Room.
+             *
+             * DocumentScreen se encargará de
+             * considerar "Documentos" una categoría
+             * que ya no exista.
+             */
+            repository.deleteCategory(id)
+
+            loadCategories()
+
+            /*
+             * Si la categoría que estaba seleccionada
+             * era precisamente la eliminada, volvemos
+             * a Documentos.
+             */
+            if (selectedCategory == category.name) {
+                selectedCategory = "Documentos"
+                loadPhotos()
+            }
+        }
+    }
+
+    fun getValidCategory(
+        category: String,
+        onResult: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+
+            val exists =
+                repository.getCategoryByName(category) != null
+
+            if (exists) {
+                onResult(category)
+            } else {
+                onResult("Documentos")
+            }
+        }
+    }
+
+
+    fun normalizePhotoCategory(
+        id: Long,
+        category: String,
+        onResult: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+
+            val exists =
+                repository.getCategoryByName(category) != null
+
+            if (exists) {
+
+                onResult(category)
+
+            } else {
+
+                repository.updatePhotoCategory(
+                    id = id,
+                    category = "Documentos"
+                )
+
+                onResult("Documentos")
+            }
+        }
+    }
 
 
 }
+

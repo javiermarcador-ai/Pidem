@@ -121,7 +121,9 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
 
     LaunchedEffect(Unit) {
 
-        session = CaptureSession()
+        session = CaptureSession(
+            category = CaptureSessionState.selectedCategory
+        )
 
         if (!hasCameraPermission) {
             permissionLauncher.launch(Manifest.permission.CAMERA)

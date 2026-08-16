@@ -4,7 +4,6 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 
 @Entity(tableName = "photos")
-
 data class PhotoRecord(
 
     @PrimaryKey(autoGenerate = true)
@@ -18,6 +17,9 @@ data class PhotoRecord(
 
     val additionalText: String,
 
+    val category: String = "Documentos",
+
     val createdAt: Long
 
 )
+

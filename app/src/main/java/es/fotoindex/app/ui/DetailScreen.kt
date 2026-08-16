@@ -36,14 +36,26 @@ import androidx.compose.foundation.layout.Arrangement
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.DropdownMenuItem
 
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DetailScreen(onOpenDocument: (Long) -> Unit) {
 
     val viewModel: PhotoViewModel = viewModel()
 
     val context = LocalContext.current
+
+    var categoryMenuExpanded by remember {
+        mutableStateOf(false)
+    }
+
+    var selectedCategory by remember {
+        mutableStateOf(DetailState.selectedCategory)
+    }
 
     var searchText by remember {
         mutableStateOf(DetailState.searchText)
@@ -75,6 +87,11 @@ fun DetailScreen(onOpenDocument: (Long) -> Unit) {
     }
 
     LaunchedEffect(Unit) {
+
+        viewModel.loadCategories()
+
+        viewModel.selectedCategory =
+            DetailState.selectedCategory
 
         if (DetailState.searchText.isBlank()) {
 
@@ -147,6 +164,97 @@ fun DetailScreen(onOpenDocument: (Long) -> Unit) {
             Text("Buscar también en notas")
 
         }
+
+        Spacer(Modifier.height(8.dp))
+
+        ExposedDropdownMenuBox(
+            expanded = categoryMenuExpanded,
+            onExpandedChange = {
+                categoryMenuExpanded = !categoryMenuExpanded
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp)
+        ) {
+
+            OutlinedTextField(
+                value = selectedCategory,
+                onValueChange = {},
+                readOnly = true,
+                label = {
+                    Text("Categoría")
+                },
+                trailingIcon = {
+                    ExposedDropdownMenuDefaults.TrailingIcon(
+                        expanded = categoryMenuExpanded
+                    )
+                },
+                modifier = Modifier
+                    .menuAnchor()
+                    .fillMaxWidth()
+            )
+
+            ExposedDropdownMenu(
+                expanded = categoryMenuExpanded,
+                onDismissRequest = {
+                    categoryMenuExpanded = false
+                }
+            ) {
+
+                // "Todas" SÍ se puede seleccionar en DetailScreen
+                DropdownMenuItem(
+                    text = {
+                        Text("Todas")
+                    },
+                    onClick = {
+
+                        selectedCategory = "Todas"
+
+                        DetailState.selectedCategory =
+                            "Todas"
+
+                        viewModel.selectedCategory =
+                            "Todas"
+
+                        categoryMenuExpanded = false
+
+                        viewModel.search(
+                            searchText,
+                            searchInNotes
+                        )
+                    }
+                )
+
+                // Categorías reales
+                viewModel.categories.forEach { category ->
+
+                    DropdownMenuItem(
+                        text = {
+                            Text(category.name)
+                        },
+                        onClick = {
+
+                            selectedCategory =
+                                category.name
+
+                            DetailState.selectedCategory =
+                                category.name
+
+                            viewModel.selectedCategory =
+                                category.name
+
+                            categoryMenuExpanded = false
+
+                            viewModel.search(
+                                searchText,
+                                searchInNotes
+                            )
+                        }
+                    )
+                }
+            }
+        }
+
 
         if (selectedIds.isNotEmpty()) {
 

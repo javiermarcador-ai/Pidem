@@ -1,9 +1,22 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
 }
+
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties()
+
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(
+        FileInputStream(keystorePropertiesFile)
+    )
+}
+
 
 android {
     namespace = "es.fotoindex.app"
@@ -23,9 +36,28 @@ android {
         }
     }
 
+    signingConfigs {
+        create("pidem") {
+
+            storeFile = file(
+                "C:/Users/Usuario/AndroidStudioProjects/FotoIndex/keystore/pidem-release.jks"
+            )
+            storePassword =                keystoreProperties.getProperty("storePassword")
+            keyAlias =                keystoreProperties.getProperty("keyAlias")
+            keyPassword =                keystoreProperties.getProperty("keyPassword")
+        }
+    }
+
+
+
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("pidem")
+        }
+
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("pidem")
 
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

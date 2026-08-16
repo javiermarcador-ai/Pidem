@@ -18,6 +18,9 @@ data class CaptureSession(
 
     val source: CaptureSource = CaptureSource.CAMERA,
 
-    val ocrText: String = ""
+    val ocrText: String = "",
+
+    val category: String = "Documentos"
+
 
 )

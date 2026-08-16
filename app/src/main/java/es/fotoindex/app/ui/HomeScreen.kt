@@ -22,10 +22,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -54,16 +54,25 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.ExperimentalMaterial3Api
+
+
+@OptIn(ExperimentalMaterial3Api::class)
 
 
 @Composable
 fun HomeScreen(
 
-    onCaptureClick: () -> Unit,
-    onGalleryClick: () -> Unit,
-    onSearchClick: () -> Unit,
+    onCaptureClick: (String) -> Unit,
+    onGalleryClick: (String) -> Unit,
+    onSearchClick: (String) -> Unit,
     onExportClick: () -> Unit,
     onSettingsClick: () -> Unit,
+    onCategoriesClick: () -> Unit,
     onOpenDocument: (Long) -> Unit
 
 ) {
@@ -83,6 +92,11 @@ fun HomeScreen(
     var showAboutDialog by rememberSaveable {
         mutableStateOf(false)
     }
+
+    var categoryMenuExpanded by remember {
+        mutableStateOf(false)
+    }
+
 
 
     /*
@@ -109,11 +123,9 @@ fun HomeScreen(
             }
         }
 
-
-
     LaunchedEffect(Unit) {
-
         photoViewModel.loadPhotos()
+        photoViewModel.loadCategories()
     }
 
     Column(
@@ -156,17 +168,114 @@ fun HomeScreen(
                 },
                 modifier = Modifier.align(Alignment.TopEnd)
             ) {
-                Image(
-                    painter = painterResource(
-                        id = R.drawable.pidem_about
-                    ),
+                Icon(
+                    imageVector = Icons.Default.Info,
                     contentDescription = "Información sobre Pidem",
-                    modifier = Modifier.size(48.dp)
+                    modifier = Modifier.size(32.dp)
                 )
             }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
+
+        /*
+ * CATEGORÍA
+ *
+ * "Todas" se muestra únicamente como referencia.
+ * No se puede seleccionar desde Home porque
+ * no es una categoría válida para guardar fotografías.
+ */
+        ExposedDropdownMenuBox(
+            expanded = categoryMenuExpanded,
+            onExpandedChange = {
+                categoryMenuExpanded = !categoryMenuExpanded
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+
+            OutlinedTextField(
+                value = photoViewModel.selectedCategory,
+                onValueChange = {},
+                readOnly = true,
+                label = {
+                    Text("Categoría")
+                },
+                trailingIcon = {
+                    ExposedDropdownMenuDefaults.TrailingIcon(
+                        expanded = categoryMenuExpanded
+                    )
+                },
+                modifier = Modifier
+                    .menuAnchor()
+                    .fillMaxWidth()
+            )
+
+            ExposedDropdownMenu(
+                expanded = categoryMenuExpanded,
+                onDismissRequest = {
+                    categoryMenuExpanded = false
+                }
+            ) {
+
+/*
+ * TODAS
+ *
+ * Es el filtro inicial y también puede
+ * seleccionarse desde Home.
+ */
+                DropdownMenuItem(
+                    text = {
+                        Text("Todas")
+                    },
+                    onClick = {
+
+                        photoViewModel.selectedCategory = "Todas"
+
+                        photoViewModel.loadPhotos()
+
+                        categoryMenuExpanded = false
+                    }
+                )
+
+                /*
+                 * CATEGORÍAS REALES
+                 */
+                photoViewModel.categories.forEach { category ->
+
+                    DropdownMenuItem(
+                        text = {
+                            Text(category.name)
+                        },
+                        onClick = {
+
+                            photoViewModel.selectedCategory =
+                                category.name
+
+                            photoViewModel.loadPhotos()
+
+                            categoryMenuExpanded = false
+                        }
+                    )
+                }
+
+                /*
+                 * GESTIÓN DE CATEGORÍAS
+                 */
+                DropdownMenuItem(
+                    text = {
+                        Text("+")
+                    },
+                    onClick = {
+
+                        categoryMenuExpanded = false
+
+                        onCategoriesClick()
+                    }
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
 
         /*
          * Capturar + Galería
@@ -182,31 +291,27 @@ fun HomeScreen(
         ) {
 
             Button(
-
-                modifier =
-                    Modifier.weight(1f),
-
-                onClick =
-                    onCaptureClick
-
+                modifier = Modifier.weight(1f),
+                onClick = {
+                    onCaptureClick (photoViewModel.selectedCategory)
+                }
             ) {
-
                 Text(
                     "📷Capturar",
                     fontSize = 13.sp
                 )
             }
 
-            Button(
 
+            Button(
                 modifier =
                     Modifier.weight(1f),
-
-                onClick =
-                    onGalleryClick
-
+                onClick = {
+                    onGalleryClick(
+                        photoViewModel.selectedCategory
+                    )
+                }
             ) {
-
                 Text(
                     "🖼Galería",
                     fontSize = 13.sp
@@ -222,13 +327,13 @@ fun HomeScreen(
          * Documentos
          */
         Button(
-
             modifier =
                 Modifier.fillMaxWidth(),
-
-            onClick =
-                onSearchClick
-
+            onClick = {
+                onSearchClick(
+                    photoViewModel.selectedCategory
+                )
+            }
         ) {
 
             Text("📚 Documentos")

@@ -113,16 +113,18 @@ fun ReviewScreen(
 
                 val session = ReviewData.session ?: return@Button
 
+                android.widget.Toast.makeText(
+                    context,
+                    "Categoría al guardar: ${es.fotoindex.app.data.CaptureSessionState.selectedCategory}",
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
+
                 photoViewModel.savePhoto(
-
                     firstPhoto = session.firstPhotoPath!!,
-
                     secondPhoto = session.secondPhotoPath,
-
                     ocrText = ReviewData.session?.ocrText ?: "",
-
-                    additionalText = additionalText
-
+                    additionalText = additionalText,
+                    category = session.category
                 )
 
                 ReviewData.session = null

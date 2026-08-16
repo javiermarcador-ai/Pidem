@@ -10,6 +10,9 @@ object CaptureSessionState {
 
     var additionalPhotoDocumentId: Long? = null
 
+    // Categoría seleccionada en HomeScreen
+    var selectedCategory = "Documentos"
+
     fun clear() {
 
         firstOcrText = ""
@@ -20,5 +23,6 @@ object CaptureSessionState {
 
         additionalPhotoDocumentId = null
 
+        selectedCategory = "Documentos"
     }
 }

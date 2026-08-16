@@ -1,1 +1,3 @@
 /build
+# Firma de la aplicación
+../keystore.properties

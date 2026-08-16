@@ -6,13 +6,16 @@ import androidx.room.RoomDatabase
 @Database(
     entities = [
         PhotoRecord::class,
-        PhotoAttachment::class
+        PhotoAttachment::class,
+        Category::class
     ],
-    version = 2,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun photoDao(): PhotoDao
+
+    abstract fun categoryDao(): CategoryDao
 
 }

@@ -41,6 +41,13 @@ import androidx.activity.result.contract.ActivityResultContracts
 import es.fotoindex.app.data.CaptureSessionState
 import androidx.compose.ui.Alignment
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.DropdownMenuItem
+
+
+@OptIn(ExperimentalMaterial3Api::class)
 
 @Composable
 fun DocumentScreen(
@@ -52,6 +59,15 @@ fun DocumentScreen(
     val photo = SelectedDocument.photo ?: return
     val context = LocalContext.current
     val viewModel: PhotoViewModel = viewModel()
+
+
+    var selectedCategory by remember {
+        mutableStateOf("Documentos")
+    }
+    var categoryMenuExpanded by remember {
+        mutableStateOf(false)
+    }
+
     val attachments =
         remember {
             mutableStateListOf<PhotoAttachment>()
@@ -91,16 +107,32 @@ fun DocumentScreen(
 
     LaunchedEffect(photo.id) {
 
+        viewModel.loadCategoriesAndWait()
+
         viewModel.loadAttachments(
             photo.id,
             attachments
         )
 
+        viewModel.normalizePhotoCategory(
+            id = photo.id,
+            category = photo.category
+        ) { validCategory ->
+
+            selectedCategory = validCategory
+
+        }
     }
+
 
     var notes by remember {
         mutableStateOf(photo.additionalText)
     }
+
+    var showModifyDialog by remember {
+        mutableStateOf(false)
+    }
+
 
     val focusRequester = remember { FocusRequester() }
 
@@ -111,6 +143,7 @@ fun DocumentScreen(
     var showDeleteDialog by remember {
         mutableStateOf(false)
     }
+
 
     var showShareDialog by remember {
         mutableStateOf(false)
@@ -155,6 +188,64 @@ fun DocumentScreen(
             text = "Lista de documentos",
             style = MaterialTheme.typography.headlineMedium
         )
+
+        Spacer(Modifier.height(12.dp))
+
+        ExposedDropdownMenuBox(
+            expanded = categoryMenuExpanded,
+            onExpandedChange = {
+                categoryMenuExpanded = !categoryMenuExpanded
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+
+            OutlinedTextField(
+                value = selectedCategory,
+                onValueChange = {},
+                readOnly = true,
+                label = {
+                    Text("Categoría")
+                },
+                trailingIcon = {
+                    ExposedDropdownMenuDefaults.TrailingIcon(
+                        expanded = categoryMenuExpanded
+                    )
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor()
+            )
+
+            ExposedDropdownMenu(
+                expanded = categoryMenuExpanded,
+                onDismissRequest = {
+                    categoryMenuExpanded = false
+                }
+            ) {
+
+                viewModel.categories
+                    .filter { it.name != "Todas" }
+                    .forEach { category ->
+
+                        DropdownMenuItem(
+                            text = {
+                                Text(category.name)
+                            },
+                            onClick = {
+
+                                selectedCategory = category.name
+
+                                categoryMenuExpanded = false
+
+                            }
+                        )
+
+                    }
+
+            }
+
+        }
+
 
         Spacer(Modifier.height(4.dp))
 
@@ -230,6 +321,7 @@ fun DocumentScreen(
 
         Spacer(Modifier.height(6.dp))
 
+
         Button(
             modifier = Modifier.fillMaxWidth(),
             onClick = {
@@ -244,22 +336,12 @@ fun DocumentScreen(
         Button(
             modifier = Modifier.fillMaxWidth(),
             onClick = {
-
-                viewModel.updateNotes(
-                    photo.id,
-                    notes
-                )
-
-                android.widget.Toast.makeText(
-                    context,
-                    "Notas actualizadas",
-                    android.widget.Toast.LENGTH_SHORT
-                ).show()
-
+                showModifyDialog = true
             }
         ) {
-            Text("Modificar notas")
+            Text("Modificar cambios")
         }
+
         Spacer(Modifier.height(20.dp))
 
         Text(
@@ -385,6 +467,67 @@ fun DocumentScreen(
 
                     Text("Cancelar")
 
+                }
+
+            }
+
+        )
+
+    }
+
+    if (showModifyDialog) {
+
+        AlertDialog(
+
+            onDismissRequest = {
+                showModifyDialog = false
+            },
+
+            title = {
+                Text("Modificar cambios")
+            },
+
+            text = {
+                Text(
+                    "Se actualizarán las notas y la categoría " +
+                         "tal y como se ven en la ventana"
+                )
+            },
+
+            confirmButton = {
+
+                Button(
+                    onClick = {
+
+                        viewModel.updateNotesAndCategory(
+                            photo.id,
+                            notes,
+                            selectedCategory
+                        )
+
+                        showModifyDialog = false
+
+                        android.widget.Toast.makeText(
+                            context,
+                            "Cambios actualizados",
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
+
+                    }
+                ) {
+                    Text("Aceptar")
+                }
+
+            },
+
+            dismissButton = {
+
+                Button(
+                    onClick = {
+                        showModifyDialog = false
+                    }
+                ) {
+                    Text("Cancelar")
                 }
 
             }
