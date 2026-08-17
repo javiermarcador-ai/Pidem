@@ -265,7 +265,8 @@ class PhotoViewModel(
         secondPhoto: String?,
         ocrText: String,
         additionalText: String,
-        category: String
+        category: String,
+        onSaved: () -> Unit = {}
     ) {
 
         viewModelScope.launch {
@@ -290,8 +291,8 @@ class PhotoViewModel(
             )
 
             repository.insert(photo)
-
             loadPhotos()
+            onSaved()
         }
     }
 

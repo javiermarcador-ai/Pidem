@@ -168,8 +168,8 @@ fun HomeScreen(
                 },
                 modifier = Modifier.align(Alignment.TopEnd)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Info,
+                Image(
+                    painter = painterResource(id = R.drawable.pidem_about),
                     contentDescription = "Información sobre Pidem",
                     modifier = Modifier.size(32.dp)
                 )
@@ -516,6 +516,13 @@ fun HomeScreen(
                 Column(
                     modifier = Modifier.fillMaxWidth()
                 ) {
+                    Text(
+                        text = "Proyecto de Imáganes y Documentos Electronicos para Móvil.",
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+
+                    Spacer( modifier = Modifier.height(16.dp) )
 
                     Text(
                         text = buildAnnotatedString {
@@ -523,9 +530,9 @@ fun HomeScreen(
                             withStyle(
                                 SpanStyle(fontWeight = FontWeight.Bold),
                             ) {
-                                append("Lagoart® '74")
+                                append("Lagoart®-'74")
                             }
-                            append(" Agosto 2026")
+                            append(" 2026")
                         },
                         modifier = Modifier.fillMaxWidth(),
                         textAlign = TextAlign.Center

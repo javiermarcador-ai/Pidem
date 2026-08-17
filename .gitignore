@@ -13,3 +13,9 @@
 .externalNativeBuild
 .cxx
 local.properties
+# Firma de la aplicación
+keystore.properties
+keystore/
+
+# APKs generados
+app/release/

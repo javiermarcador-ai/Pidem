@@ -1,8 +1,9 @@
 package es.fotoindex.app.ui
 
+import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts.GetContent
+import androidx.activity.result.contract.ActivityResultContracts.OpenDocument
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
@@ -18,34 +19,53 @@ fun GalleryScreen(
 
     val galleryLauncher =
         rememberLauncherForActivityResult(
-            GetContent()
+            OpenDocument()
         ) { uri: Uri? ->
 
             if (uri != null) {
 
-                CameraPreview.copyGalleryImage(
-                    context,
-                    uri
-                ) { imagePath ->
+                /*
+                 * Conservamos la URI ORIGINAL.
+                 *
+                 * Ya NO hacemos una copia gallery_....jpg.
+                 */
+                try {
 
-                    GalleryData.imagePath = imagePath
+                    context.contentResolver.takePersistableUriPermission(
+                        uri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    )
 
-                    if (GalleryData.secondPhoto) {
+                } catch (e: Exception) {
 
-                        GalleryData.secondPhoto = false
+                    /*
+                     * Algunas aplicaciones/proveedores no
+                     * permiten permisos persistentes.
+                     *
+                     * No es un error para continuar.
+                     */
+                    e.printStackTrace()
+                }
 
-                        navController.popBackStack()
+                GalleryData.imagePath =
+                    uri.toString()
 
-                    } else {
+                if (GalleryData.secondPhoto) {
 
-                        navController.navigate(AppScreen.Camera.route) {
+                    GalleryData.secondPhoto = false
 
-                            popUpTo(AppScreen.Home.route)
+                    navController.popBackStack()
 
-                        }
+                } else {
 
+                    navController.navigate(
+                        AppScreen.Camera.route
+                    ) {
+
+                        popUpTo(
+                            AppScreen.Home.route
+                        )
                     }
-
                 }
 
             } else {
@@ -53,13 +73,12 @@ fun GalleryScreen(
                 navController.popBackStack()
 
             }
-
         }
 
     LaunchedEffect(Unit) {
 
-         galleryLauncher.launch("image/*")
-
+        galleryLauncher.launch(
+            arrayOf("image/*")
+        )
     }
-
 }

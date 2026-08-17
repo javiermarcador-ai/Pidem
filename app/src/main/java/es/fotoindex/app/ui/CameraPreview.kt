@@ -17,6 +17,8 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Locale
+import android.provider.MediaStore
+import androidx.annotation.RequiresApi
 
 object CameraPreview {
 
@@ -174,10 +176,10 @@ object CameraPreview {
         }
 
         val tempFile =
-            kotlin.io.path.createTempFile(
-                prefix = "pidem_capture_",
-                suffix = ".jpg"
-            ).toFile()
+            java.io.File.createTempFile(
+                "pidem_capture_",
+                ".jpg"
+            )
 
         val outputOptions =
             ImageCapture.OutputFileOptions
@@ -256,4 +258,166 @@ object CameraPreview {
             }
         )
     }
+
+
+    fun deleteImage(
+        context: Context,
+        path: String
+    ): Boolean {
+
+        return try {
+
+            val uri = Uri.parse(path)
+
+            context.contentResolver.delete(
+                uri,
+                null,
+                null
+            ) > 0
+
+        } catch (e: Exception) {
+
+            e.printStackTrace()
+            false
+
+        }
+    }
+
+    fun deleteOriginalImage(
+        context: Context,
+        path: String
+    ): Boolean {
+
+        return try {
+
+            val uri = Uri.parse(path)
+
+            if (
+                uri.authority ==
+                "com.android.externalstorage.documents"
+            ) {
+
+                val documentFile =
+                    DocumentFile.fromSingleUri(
+                        context,
+                        uri
+                    )
+
+                documentFile?.delete() == true
+
+            } else {
+
+                /*
+                 * Las imágenes procedentes de Gallery /
+                 * Photo Picker no se pueden eliminar
+                 * directamente desde aquí.
+                 *
+                 * El borrado se gestionará posteriormente
+                 * mediante la autorización de Android.
+                 */
+                false
+            }
+
+        } catch (e: Exception) {
+
+            e.printStackTrace()
+
+            false
+        }
+    }
+
+    fun isGalleryImage(
+        path: String
+    ): Boolean {
+
+        val uri = Uri.parse(path)
+
+        return uri.authority == "media"
+    }
+
+
+    @RequiresApi(30)
+    fun createGalleryDeleteRequest(
+        context: Context,
+        paths: List<String>
+    ): android.app.PendingIntent? {
+
+        val resolver = context.contentResolver
+
+        val mediaStoreUris =
+            paths
+                .mapNotNull { path ->
+
+                    try {
+
+                        val uri = Uri.parse(path)
+
+                        /*
+                         * Las imágenes seleccionadas desde Gallery
+                         * mediante GetContent() pueden llegar como:
+                         *
+                         * content://media/picker_get_content/0/...
+                         * /media/1000403662
+                         *
+                         * El último segmento es el ID de MediaStore.
+                         */
+
+                        if (uri.authority != MediaStore.AUTHORITY) {
+                            return@mapNotNull null
+                        }
+
+                        val lastSegment =
+                            uri.lastPathSegment
+                                ?: return@mapNotNull null
+
+                        /*
+                         * Por si el proveedor devuelve el ID
+                         * acompañado de una extensión.
+                         */
+                        val idString =
+                            lastSegment.substringBefore(".")
+
+                        val id =
+                            idString.toLongOrNull()
+                                ?: return@mapNotNull null
+
+                        /*
+                         * Creamos la URI real de MediaStore
+                         * que identifica exactamente la imagen.
+                         */
+                        MediaStore.Images.Media.getContentUri(
+                            MediaStore.VOLUME_EXTERNAL_PRIMARY,
+                            id
+                        )
+
+                    } catch (e: Exception) {
+
+                        e.printStackTrace()
+                        null
+                    }
+                }
+                .distinct()
+
+        if (mediaStoreUris.isEmpty()) {
+            return null
+        }
+
+        return try {
+
+            MediaStore.createDeleteRequest(
+                resolver,
+                mediaStoreUris
+            )
+
+        } catch (e: Exception) {
+
+            e.printStackTrace()
+            null
+        }
+    }
+
+
+
+
+
 }

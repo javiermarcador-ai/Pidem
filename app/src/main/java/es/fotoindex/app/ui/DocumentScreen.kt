@@ -61,6 +61,14 @@ fun DocumentScreen(
     val viewModel: PhotoViewModel = viewModel()
 
 
+    var showDeleteOriginalsDialog by remember {
+        mutableStateOf(false)
+    }
+
+    var galleryOriginalUris by remember {
+        mutableStateOf<List<android.net.Uri>>(emptyList())
+    }
+
     var selectedCategory by remember {
         mutableStateOf("Documentos")
     }
@@ -73,10 +81,27 @@ fun DocumentScreen(
             mutableStateListOf<PhotoAttachment>()
         }
 
+
+
     val galleryLauncher =
         rememberLauncherForActivityResult(
             contract = ActivityResultContracts.GetMultipleContents()
         ) { uris ->
+
+            if (uris.isNotEmpty()) {
+
+                galleryOriginalUris = uris
+
+                var completed = 0
+
+                uris.forEach { uri ->
+                    // ...
+                }
+            }
+
+            galleryOriginalUris = uris
+
+            var completed = 0
 
             uris.forEach { uri ->
 
@@ -91,18 +116,24 @@ fun DocumentScreen(
                     )
 
                     attachments.add(
-                        es.fotoindex.app.database.PhotoAttachment(
+                        PhotoAttachment(
                             photoId = photo.id,
                             imagePath = copiedPath
                         )
                     )
 
+                    completed++
+
+                    /*
+                     * Esperamos a que TODAS las imágenes
+                     * hayan sido incorporadas a Pidem.
+                     */
+                    if (completed == uris.size) {
+                        showDeleteOriginalsDialog = true
+                    }
                 }
-
             }
-
         }
-
 
 
     LaunchedEffect(photo.id) {
@@ -166,6 +197,14 @@ fun DocumentScreen(
         mutableStateOf(false)
     }
 
+    var showGalleryDeleteResultDialog by remember {
+        mutableStateOf(false)
+    }
+
+    var galleryDeleteResultText by remember {
+        mutableStateOf("")
+    }
+
     var selectedAttachment by remember {
         mutableStateOf<PhotoAttachment?>(null)
     }
@@ -173,6 +212,40 @@ fun DocumentScreen(
     var showAttachmentDeleteDialog by remember {
         mutableStateOf(false)
     }
+
+
+
+    val galleryDeleteLauncher =
+        rememberLauncherForActivityResult(
+            contract =
+                androidx.activity.result.contract.ActivityResultContracts
+                    .StartIntentSenderForResult()
+        ) { result ->
+
+            if (
+                result.resultCode ==
+                android.app.Activity.RESULT_OK
+            ) {
+
+                galleryDeleteResultText =
+                    "Las imágenes originales se han eliminado correctamente."
+
+            } else {
+
+                galleryDeleteResultText =
+                    "No se han eliminado las imágenes originales."
+            }
+
+            showGalleryDeleteResultDialog = true
+            galleryOriginalUris = emptyList()
+        }
+
+
+
+
+
+
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -189,7 +262,7 @@ fun DocumentScreen(
             style = MaterialTheme.typography.headlineMedium
         )
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(6.dp))
 
         ExposedDropdownMenuBox(
             expanded = categoryMenuExpanded,
@@ -247,7 +320,7 @@ fun DocumentScreen(
         }
 
 
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(8.dp))
 
 
         AsyncImage(
@@ -255,7 +328,7 @@ fun DocumentScreen(
             contentDescription = null,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(160.dp)
+                .height(120.dp)
                 .clickable {
                     openPhotoExternally(
                         context,
@@ -274,7 +347,7 @@ fun DocumentScreen(
                 contentDescription = null,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(160.dp)
+                    .height(120.dp)
                     .clickable {
                         openPhotoExternally(
                             context,
@@ -287,7 +360,7 @@ fun DocumentScreen(
 
         }
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(12.dp))
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -319,7 +392,7 @@ fun DocumentScreen(
 
         }
 
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(4.dp))
 
 
         Button(
@@ -331,7 +404,7 @@ fun DocumentScreen(
             Text("Añadir más fotos")
         }
 
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(4.dp))
 
         Button(
             modifier = Modifier.fillMaxWidth(),
@@ -930,6 +1003,116 @@ fun DocumentScreen(
 
     }
 
+    if (showDeleteOriginalsDialog) {
+
+        AlertDialog(
+
+            onDismissRequest = {
+                showDeleteOriginalsDialog = false
+                galleryOriginalUris = emptyList()
+            },
+
+            title = {
+                Text("Eliminar imágenes originales")
+            },
+
+            text = {
+                Text(
+                    "Las imágenes originales ya han sido incorporadas a Pidem.\n\n" +
+                            "¿Desea eliminarlas del dispositivo para evitar tener copias duplicadas?"
+                )
+            },
+
+            confirmButton = {
+
+                Button(
+                    onClick = {
+                        val paths =
+                            galleryOriginalUris.map {
+                                it.toString()
+                            }
+                        showDeleteOriginalsDialog = false
+                        if (
+                            android.os.Build.VERSION.SDK_INT >=
+                            android.os.Build.VERSION_CODES.R
+                        ) {
+                            val pendingIntent =
+                                CameraPreview.createGalleryDeleteRequest(
+                                    context = context,
+                                    paths = paths
+                                )
+                            if (pendingIntent != null) {
+                                val request =
+                                    androidx.activity.result.IntentSenderRequest
+                                        .Builder(    pendingIntent.intentSender   )
+                                        .build()
+                                galleryDeleteLauncher.launch(request)
+                            } else {
+                                galleryDeleteResultText =
+                                    "No se pudo solicitar la eliminación de las imágenes originales."
+                                showGalleryDeleteResultDialog = true
+                                galleryOriginalUris = emptyList()
+                            }
+
+                        } else {
+                            galleryDeleteResultText =
+                                "Esta versión de Android no permite solicitar la eliminación de estas imágenes."
+                            showGalleryDeleteResultDialog = true
+                            galleryOriginalUris = emptyList()
+                        }
+                    }
+                ) {
+                    Text("Aceptar")
+                }
+            },
+
+            dismissButton = {
+
+                Button(
+                    onClick = {
+
+                        showDeleteOriginalsDialog = false
+                        galleryOriginalUris = emptyList()
+
+                    }
+
+                ) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    if (showGalleryDeleteResultDialog) {
+
+        AlertDialog(
+
+            onDismissRequest = {
+                showGalleryDeleteResultDialog = false
+            },
+
+            title = {
+                Text("Resultado")
+            },
+
+            text = {
+                Text(galleryDeleteResultText)
+            },
+
+            confirmButton = {
+
+                Button(
+                    onClick = {
+                        showGalleryDeleteResultDialog = false
+                    }
+                ) {
+                    Text("Aceptar")
+                }
+            }
+        )
+    }
+
+
 
 
 
@@ -975,4 +1158,11 @@ private fun openPhotoExternally(
 
         e.printStackTrace()
     }
+
+
+
+
+
+
+
 }

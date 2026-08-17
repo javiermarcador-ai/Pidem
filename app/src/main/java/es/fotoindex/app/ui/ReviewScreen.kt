@@ -23,6 +23,13 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalFocusManager
 
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
+
+
+
 @Composable
 
 
@@ -33,16 +40,54 @@ fun ReviewScreen(
 ) {
 
 
-
-
     var additionalText by remember {
         mutableStateOf("")
     }
 
+    var showDeleteDialog by remember {mutableStateOf(false)  }
+    var deleteResultDialog by remember {mutableStateOf(false) }
+    var deleteResultText by remember {mutableStateOf("") }
 
     val photoViewModel: PhotoViewModel = viewModel()
     val context = LocalContext.current
     val focusRequester = remember { FocusRequester() }
+
+    val galleryDeleteLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.StartIntentSenderForResult()
+        ) { result ->
+
+            val currentSession =
+                ReviewData.session
+            val galleryCount =
+                currentSession
+                    ?.originalImagePaths
+                    ?.count {
+                        CameraPreview.isGalleryImage(it)
+                    }
+                    ?: 0
+            val galleryResult =
+                if (result.resultCode == android.app.Activity.RESULT_OK) {
+                    if (galleryCount == 1) {
+                        "Imagen de galería borrada correctamente."
+                    } else {
+                        "$galleryCount imágenes de galería borradas correctamente."
+                    }
+                } else {
+                    "No se pudieron eliminar las imágenes de la galería."
+                }
+
+            if (deleteResultText.isBlank()) {
+                deleteResultText = galleryResult
+            } else {
+                deleteResultText =
+                    deleteResultText +
+                            "\n\n" +
+                            galleryResult
+            }
+            deleteResultDialog = true
+        }
+
 
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
@@ -60,13 +105,202 @@ fun ReviewScreen(
     ) {
 
         Text(
-
             text = "Revisión del documento",
-
             style = MaterialTheme.typography.headlineSmall
-
         )
+
         Spacer(modifier = Modifier.height(20.dp))
+
+
+        if (showDeleteDialog) {
+
+            androidx.compose.material3.AlertDialog(
+
+                onDismissRequest = {
+                    // Cancelar equivale a conservar las originales.
+                    showDeleteDialog = false
+
+                    ReviewData.session = null
+                    onSave(additionalText)
+                },
+
+                title = {
+                    Text("Eliminar imágenes originales")
+                },
+
+                text = {
+                    Text(
+                        "La imagen original ya ha sido incorporada a Pidem.\n\n" +
+                                "¿Desea eliminar las imágenes del dispositivo para evitar tener copias duplicadas?"
+                    )
+                },
+
+                confirmButton = {
+                    Button(
+                        onClick = {
+
+                            val currentSession =
+                                ReviewData.session
+
+                            if (currentSession == null) {
+
+                                showDeleteDialog = false
+                                return@Button
+                            }
+
+                            val galleryPaths =
+                                currentSession.originalImagePaths
+                                    .filter {
+                                        CameraPreview.isGalleryImage(it)
+                                    }
+
+                            val localResults =
+                                currentSession.originalImagePaths
+                                    .filter {
+                                        !CameraPreview.isGalleryImage(it)
+                                    }
+                                    .map { path ->
+
+                                        CameraPreview.deleteOriginalImage(
+                                            context = context,
+                                            path = path
+                                        )
+                                    }
+
+                            val localDeleted =
+                                localResults.count { it }
+
+                            val localFailed =
+                                localResults.count { !it }
+
+                            /*
+                             * Primero resolvemos las imágenes que
+                             * podemos borrar directamente.
+                             */
+
+                            val localMessages =
+                                mutableListOf<String>()
+
+                            repeat(localDeleted) {
+
+                                localMessages.add(
+                                    "Imagen borrada correctamente."
+                                )
+                            }
+
+                            repeat(localFailed) {
+
+                                localMessages.add(
+                                    "No se pudo eliminar la imagen."
+                                )
+                            }
+
+                            /*
+                             * Ahora gestionamos las imágenes procedentes
+                             * de Gallery.
+                             */
+
+                            if (galleryPaths.isNotEmpty()) {
+
+                                if (Build.VERSION.SDK_INT >= 30) {
+
+                                    val pendingIntent =
+                                        CameraPreview.createGalleryDeleteRequest(
+                                            context = context,
+                                            paths = galleryPaths
+                                        )
+
+                                    if (pendingIntent != null) {
+
+                                        /*
+                                         * Guardamos temporalmente el resultado
+                                         * de cámara para mostrarlo después de
+                                         * la autorización de Android.
+                                         */
+                                        deleteResultText =
+                                            localMessages.joinToString(
+                                                separator = "\n\n"
+                                            )
+
+                                        showDeleteDialog = false
+
+                                        galleryDeleteLauncher.launch(
+                                            IntentSenderRequest.Builder(
+                                                pendingIntent.intentSender
+                                            ).build()
+                                        )
+
+                                        return@Button
+                                    }
+
+                                } else {
+
+                                    localMessages.add(
+                                        "No se pueden eliminar las imágenes de la galería en esta versión de Android."
+                                    )
+                                }
+                            }
+
+                            /*
+                             * Si no había imágenes de Gallery,
+                             * mostramos directamente el resultado.
+                             */
+
+                            deleteResultText =
+                                localMessages.joinToString(
+                                    separator = "\n\n"
+                                )
+
+                            showDeleteDialog = false
+                            deleteResultDialog = true
+                        }
+                    ) {
+                        Text("Aceptar")
+                    }
+                },
+
+                dismissButton = {
+
+                    Button(
+                        onClick = {
+
+                            showDeleteDialog = false
+
+                            ReviewData.session = null
+                            onSave(additionalText)
+                        }
+                    ) {
+                        Text("Cancelar")
+                    }
+                }
+            )
+        }
+
+        if (deleteResultDialog) {
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = {
+                    deleteResultDialog = false
+                    ReviewData.session = null
+                    onSave(additionalText)
+                },
+
+                title = {                    Text("Resultado")                },
+                text = {                    Text(deleteResultText)                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            deleteResultDialog = false
+                            ReviewData.session = null
+                            onSave(additionalText)
+                        }
+                    ) {
+                        Text("Aceptar")
+                    }
+                }
+            )
+        }
+
+
 
 
         ReviewData.session?.firstPhotoPath?.let {
@@ -122,16 +356,19 @@ fun ReviewScreen(
                 photoViewModel.savePhoto(
                     firstPhoto = session.firstPhotoPath!!,
                     secondPhoto = session.secondPhotoPath,
-                    ocrText = ReviewData.session?.ocrText ?: "",
+                    ocrText = session.ocrText,
                     additionalText = additionalText,
-                    category = session.category
+                    category = session.category,
+
+                    onSaved = {
+                        if (session.originalImagePaths.isNotEmpty()) {
+                            showDeleteDialog = true
+                        } else {
+                            ReviewData.session = null
+                            onSave(additionalText)
+                        }
+                    }
                 )
-
-                ReviewData.session = null
-
-                photoViewModel.loadPhotos()
-
-                onSave(additionalText)
 
             }
 

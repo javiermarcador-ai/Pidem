@@ -27,6 +27,7 @@ import es.fotoindex.app.ocr.OcrPipeline
 import es.fotoindex.app.data.CaptureSessionState
 import es.fotoindex.app.database.PhotoAttachment
 import es.fotoindex.app.viewmodel.PhotoViewModel
+import android.content.Intent
 
 @Composable
 fun CameraScreen(navController: androidx.navigation.NavHostController) {
@@ -34,11 +35,27 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
     val context = LocalContext.current
     val viewModel: PhotoViewModel = viewModel()
 
-    var session by remember {mutableStateOf(CaptureSession())  }
+    var session by remember {
+        mutableStateOf(
+            CaptureSession(
+                category = CaptureSessionState.selectedCategory
+            )
+        )
+    }
 
     var galleryCancelled by remember {
         mutableStateOf(false)
     }
+
+    var showDeleteCameraOriginalDialog by remember {
+        mutableStateOf(false)
+    }
+
+    var cameraOriginalPathToDelete by remember {
+        mutableStateOf<String?>(null)
+    }
+
+
 
     var hasCameraPermission by remember {
         mutableStateOf(
@@ -58,65 +75,78 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
 
     val galleryLauncher =
         rememberLauncherForActivityResult(
-            GetContent()
+            contract = GetContent()
         ) { uri: Uri? ->
 
-            if (uri == null) {
-
-                galleryCancelled = true
+            if (uri == null) {      galleryCancelled = true
 
             } else {
-
                 galleryCancelled = false
+                /*
+                 * Guardamos la URI ORIGINAL de la galería.
+                 *
+                 * Ya no hacemos una copia temporal gallery_XXXX.jpg.
+                 */
 
-                CameraPreview.copyGalleryImage(
-                    context = context,
-                    uri = uri
-                ) { imagePath ->
-
-                    OcrPipeline.process(
-                        context = context,
-                        imagePath = imagePath,
-
-                        onSuccess = { text ->
-
-                            if (session.reviewingFirstPhoto) {
-                                session = session.copy(firstOcrText = text)
-
-                            } else {
-                                session = session.copy(secondOcrText = text)
-                            }
-
-                            session = session.copy(
-                                previewPhotoPath = imagePath,
-                                reviewingPhoto = true,
-                                source = CaptureSource.GALLERY
-                            )
-                        },
-
-                        onError = {
-
-                            if (session.reviewingFirstPhoto) {
-                                session = session.copy(firstOcrText = "")
-
-                            } else {
-                                session = session.copy(secondOcrText = "")
-                            }
-
-                            session = session.copy(
-                                previewPhotoPath = imagePath,
-                                reviewingPhoto = true,
-                                source = CaptureSource.GALLERY
-                            )
-                        }
-
+                try {
+                    context.contentResolver.takePersistableUriPermission(
+                        uri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION
                     )
+                } catch (_: SecurityException) {
+                    // Algunos proveedores no permiten permisos persistentes.
                 }
 
+                val originalPath = uri.toString()
+                val updatedOriginals = session.originalImagePaths + originalPath
+                session = session.copy(
+                    originalImagePaths = updatedOriginals,
+                    temporaryGalleryPath = null
+                )
+
+                /*
+                 * Procesamos directamente la imagen original.
+                 */
+                OcrPipeline.process(
+                    context = context,
+                    imagePath = originalPath,
+                    onSuccess = { text ->
+
+                        if (session.reviewingFirstPhoto) {
+                            session = session.copy( firstOcrText = text )
+                        } else {
+                            session = session.copy(secondOcrText = text )
+                        }
+
+                        session = session.copy(
+                                previewPhotoPath = originalPath,
+                                reviewingPhoto = true,
+                                source = CaptureSource.GALLERY
+                            )
+                    },
+
+                    onError = {
+                        if (session.reviewingFirstPhoto) {
+                            session = session.copy(firstOcrText = "")
+
+                        } else {
+
+                            session =
+                                session.copy(
+                                    secondOcrText = ""
+                                )
+                        }
+
+                        session =
+                            session.copy(
+                                previewPhotoPath = originalPath,
+                                reviewingPhoto = true,
+                                source = CaptureSource.GALLERY
+                            )
+                    }
+                )
             }
-
         }
-
 
 
     LaunchedEffect(Unit) {
@@ -242,13 +272,17 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
                     } else {
 
                         CameraPreview.takePhoto(context) { photoPath ->
+
+                            session = session.copy(
+                                originalImagePaths =
+                                    session.originalImagePaths + photoPath
+                            )
+
                             OcrPipeline.process(
                                 context = context,
                                 imagePath = photoPath,
                                 onSuccess = { text ->
-
                                     session = if (session.reviewingFirstPhoto) {
-
                                         session.copy(
                                             previewPhotoPath = photoPath,
                                             reviewingPhoto = true,
@@ -256,13 +290,11 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
                                         )
 
                                     } else {
-
                                         session.copy(
                                             previewPhotoPath = photoPath,
                                             reviewingPhoto = true,
                                             secondOcrText = text
                                         )
-
                                     }
                                 },
 
@@ -323,7 +355,9 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
                             previewPhotoPath = null,
                             reviewingPhoto = false
                         )
+
                         galleryLauncher.launch("image/*")
+
                     } else {
                         // La fotografía actual procede de la cámara.
                         // Volvemos al visor de la cámara.
@@ -350,21 +384,54 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
                         cropArea = CropState.cropArea
                     )
 
+                    val temporaryGalleryPath = session.temporaryGalleryPath
+
+                    if (temporaryGalleryPath != null) {
+
+                        CameraPreview.deleteImage(
+                            context = context,
+                            path = temporaryGalleryPath
+                        )
+
+                        session = session.copy(
+                            temporaryGalleryPath = null
+                        )
+                    }
+
                     val additionalPhotoDocumentId =
                         CaptureSessionState.additionalPhotoDocumentId
 
                     if (additionalPhotoDocumentId != null) {
 
+                        /*
+                         * Estamos añadiendo una fotografía adicional
+                         * tomada con la cámara.
+                         *
+                         * photoPath = fotografía original capturada
+                         * croppedPath = fotografía que realmente
+                         *               incorporamos al documento.
+                         */
+                        val originalCameraPath = session.previewPhotoPath
+
                         viewModel.addAttachment(
                             photoId = additionalPhotoDocumentId,
                             imagePath = croppedPath
                         )
-
                         CaptureSessionState.additionalPhotoDocumentId = null
 
-                        navController.popBackStack()
+                        /*
+                         * Si tenemos la fotografía original,
+                         * preguntamos al usuario si desea eliminarla.
+                         */
+                        if (originalCameraPath != null) {
+                            cameraOriginalPathToDelete = originalCameraPath
+                            showDeleteCameraOriginalDialog = true
 
-                    } else  if (session.reviewingFirstPhoto) {
+                        } else {
+                            navController.popBackStack()
+                        }
+
+                    } else if (session.reviewingFirstPhoto) {
                             session = session.copy(
                                 firstPhotoPath = croppedPath,
                                 previewPhotoPath = null,
@@ -487,5 +554,98 @@ fun CameraScreen(navController: androidx.navigation.NavHostController) {
         )
 
     }
+
+    if (showDeleteCameraOriginalDialog) {
+
+        androidx.compose.material3.AlertDialog(
+
+            onDismissRequest = {
+
+                showDeleteCameraOriginalDialog = false
+                cameraOriginalPathToDelete = null
+
+                navController.popBackStack()
+            },
+
+            title = {
+                Text("Eliminar fotografía original")
+            },
+
+            text = {
+                Text(
+                    "La fotografía original tomada con la cámara " +
+                            "ya ha sido incorporada a Pidem mediante " +
+                            "la fotografía recortada.\n\n" +
+                            "¿Desea eliminar la fotografía original " +
+                            "para evitar tener una copia duplicada?"
+                )
+            },
+
+            confirmButton = {
+
+                Button(
+                    onClick = {
+
+                        val originalPath =
+                            cameraOriginalPathToDelete
+
+                        if (originalPath != null) {
+
+                            val deleted =
+                                CameraPreview.deleteOriginalImage(
+                                    context = context,
+                                    path = originalPath
+                                )
+
+                            if (deleted) {
+
+                                android.widget.Toast.makeText(
+                                    context,
+                                    "Fotografía original eliminada",
+                                     android.widget.Toast.LENGTH_SHORT
+                                ).show()
+
+                            } else {
+
+                                android.widget.Toast.makeText(
+                                    context,
+                                    "No se pudo eliminar la fotografía original",
+                                    android.widget.Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        }
+
+                        showDeleteCameraOriginalDialog = false
+                        cameraOriginalPathToDelete = null
+
+                        navController.popBackStack()
+                    }
+                ) {
+                    Text("Eliminar")
+                }
+            },
+
+            dismissButton = {
+
+                Button(
+                    onClick = {
+
+                        /*
+                         * No se elimina la original.
+                         * Simplemente volvemos al documento.
+                         */
+
+                        showDeleteCameraOriginalDialog = false
+                        cameraOriginalPathToDelete = null
+
+                        navController.popBackStack()
+                    }
+                ) {
+                    Text("Conservar")
+                }
+            }
+        )
+    }
+
 
 }
