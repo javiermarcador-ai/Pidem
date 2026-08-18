@@ -259,29 +259,39 @@ object CameraPreview {
         )
     }
 
-
     fun deleteImage(
         context: Context,
         path: String
     ): Boolean {
-
         return try {
-
             val uri = Uri.parse(path)
-
-            context.contentResolver.delete(
-                uri,
-                null,
-                null
-            ) > 0
-
+            /*
+             * Las imágenes de Pidem se guardan mediante
+             * Storage Access Framework (DocumentFile).
+             *
+             * Por tanto, para eliminarlas físicamente
+             * debemos utilizar DocumentFile.delete().
+             */
+            val documentFile =
+                DocumentFile.fromSingleUri(
+                    context,
+                    uri
+                )
+            if (documentFile != null) {          documentFile.delete()
+            } else {
+                /*      Fallback para URI que pueda manejar       * directamente el ContentResolver.  */
+                context.contentResolver.delete(
+                    uri,
+                    null,
+                    null
+                ) > 0
+            }
         } catch (e: Exception) {
-
             e.printStackTrace()
             false
-
         }
     }
+
 
     fun deleteOriginalImage(
         context: Context,

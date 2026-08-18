@@ -21,6 +21,7 @@ interface PhotoDao {
     suspend fun getAll(): List<PhotoRecord>
 
 
+
     @Query("""
         SELECT *
         FROM photos
@@ -30,6 +31,19 @@ interface PhotoDao {
     suspend fun getByCategory(
         category: String
     ): List<PhotoRecord>
+
+
+    @Query("""
+    SELECT *
+    FROM photos
+    WHERE id = :id
+    LIMIT 1
+""")
+    suspend fun getById(
+        id: Long
+    ): PhotoRecord?
+
+
 
 
     @Query("""
@@ -100,6 +114,17 @@ interface PhotoDao {
         id: Long
     )
 
+    @Query("""
+    DELETE FROM photo_attachments
+""")
+    suspend fun deleteAllAttachments()
+
+
+    @Query("""
+    DELETE FROM photos
+""")
+    suspend fun deleteAllPhotos()
+
 
     @Query("""
     UPDATE photos
@@ -150,6 +175,14 @@ interface PhotoDao {
     suspend fun getAttachments(
         photoId: Long
     ): List<PhotoAttachment>
+
+    @Query("""
+    DELETE FROM photo_attachments
+    WHERE photoId = :photoId
+""")
+    suspend fun deleteAttachments(
+        photoId: Long
+    )
 
 
     @Query("""

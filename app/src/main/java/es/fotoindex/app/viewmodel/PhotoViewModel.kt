@@ -14,6 +14,8 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import es.fotoindex.app.database.Category
+import es.fotoindex.app.ui.CameraPreview
+import es.fotoindex.app.data.PidemStorage
 
 class PhotoViewModel(
     application: Application
@@ -114,25 +116,85 @@ class PhotoViewModel(
 
     /*     * Eliminar fotografía     */
 
+    /*
+     * Eliminar una fotografía/documento
+     *
+     * Se eliminan:
+     * - fotografía principal
+     * - segunda fotografía, si existe
+     * - fotografías adjuntas
+     * - registros de adjuntos
+     * - registro principal de Room
+     */
     fun deletePhoto(
         id: Long
     ) {
-
         viewModelScope.launch {
+            val photo =                repository.getById(id)
+            if (photo != null) {
+                /*
+                 * Fotografías principales
+                 */
+                PidemStorage.deleteImage(
+                    getApplication(),
+                    photo.firstPhoto
+                )
 
-            repository.delete(id)
+                photo.secondPhoto?.let { path ->
+
+                    PidemStorage.deleteImage(
+                        getApplication(),
+                        path
+                    )
+                }
+
+                /*
+                 * Fotografías adjuntas
+                 */
+                val attachments =
+                    repository.getAttachments(id)
+
+                attachments.forEach { attachment ->
+
+                    PidemStorage.deleteImage(
+                        getApplication(),
+                        attachment.imagePath
+                    )
+
+                    repository.deleteAttachment(
+                        attachment.id
+                    )
+                }
+
+                /*
+                 * Finalmente eliminamos
+                 * el registro principal.
+                 */
+                repository.delete(id)
+            }
 
             loadPhotos()
-
         }
+    }
 
+
+    fun deleteAllData(  onFinished: (Boolean) -> Unit = {}  ) {
+        viewModelScope.launch {
+            repository.deleteAll()
+            val storageDeleted =
+                es.fotoindex.app.data.PidemStorage
+                    .deletePidemFolder(
+                        getApplication()
+                    )
+            photos.clear()
+            onFinished(storageDeleted)
+        }
     }
 
 
     /*
-     * Eliminar varias fotografías
+     * Eliminar varias fotografías/documentos
      */
-
     fun deletePhotos(
         ids: Set<Long>
     ) {
@@ -141,20 +203,57 @@ class PhotoViewModel(
 
             ids.forEach { id ->
 
-                repository.delete(id)
+                val photo =
+                    repository.getById(id)
 
+                if (photo != null) {
+
+                    /*
+                     * Fotografías principales
+                     */
+                    PidemStorage.deleteImage(
+                        getApplication(),
+                        photo.firstPhoto
+                    )
+
+                    photo.secondPhoto?.let { path ->
+
+                        PidemStorage.deleteImage(
+                            getApplication(),
+                            path
+                        )
+                    }
+
+                    /*
+                     * Fotografías adjuntas
+                     */
+                    val attachments =
+                        repository.getAttachments(id)
+
+                    attachments.forEach { attachment ->
+
+                        PidemStorage.deleteImage(
+                            getApplication(),
+                            attachment.imagePath
+                        )
+
+                        repository.deleteAttachment(
+                            attachment.id
+                        )
+                    }
+
+                    /*
+                     * Registro principal
+                     */
+                    repository.delete(id)
+                }
             }
 
             loadPhotos()
-
         }
-
     }
 
 
-    /*
-     * Modificar notas
-     */
 
     fun updateNotesAndCategory(
         id: Long,
@@ -174,12 +273,8 @@ class PhotoViewModel(
         }
     }
     suspend fun loadCategories() {
-
         categories.clear()
-
-        val loadedCategories =
-            repository.getCategories()
-
+        val loadedCategories =   repository.getCategories()
         if (
             loadedCategories.none {
                 it.name.equals(
@@ -188,17 +283,12 @@ class PhotoViewModel(
                 )
             }
         ) {
-
             repository.insertCategory(
-                Category(
-                    name = "Documentos"
-                )
+                Category(  name = "Documentos"    )
             )
         }
 
-        categories.addAll(
-            repository.getCategories()
-        )
+        categories.addAll( repository.getCategories()  )
 
         if (
             selectedCategory != "Todas" &&
@@ -209,7 +299,6 @@ class PhotoViewModel(
                 )
             }
         ) {
-
             selectedCategory = "Documentos"
         }
     }

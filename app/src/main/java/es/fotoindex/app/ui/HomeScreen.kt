@@ -59,7 +59,9 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.ExperimentalMaterial3Api
-
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.compose.ui.platform.LocalLifecycleOwner
 
 @OptIn(ExperimentalMaterial3Api::class)
 
@@ -81,6 +83,10 @@ fun HomeScreen(
 
     val photoViewModel: PhotoViewModel = viewModel()
 
+    LaunchedEffect(Unit) {
+        photoViewModel.loadCategoriesAndWait()
+        photoViewModel.loadPhotos()
+    }
 
     var showStorageDialog by rememberSaveable {
 
@@ -123,10 +129,8 @@ fun HomeScreen(
             }
         }
 
-    LaunchedEffect(Unit) {
-        photoViewModel.loadPhotos()
-        photoViewModel.loadCategories()
-    }
+
+
 
     Column(
 
@@ -517,7 +521,7 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = "Proyecto de Imáganes y Documentos Electronicos para Móvil.",
+                        text = "Proyecto de Imáganes y Documentos Electrónicos para Móvil.",
                         textAlign = TextAlign.Center,
                         style = MaterialTheme.typography.bodySmall
                     )

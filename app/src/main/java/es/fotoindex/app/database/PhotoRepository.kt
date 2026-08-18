@@ -33,6 +33,19 @@ class PhotoRepository(
 
     }
 
+    suspend fun getById(
+        id: Long
+    ): PhotoRecord? {
+
+        return photoDao.getById(
+            id
+        )
+
+    }
+
+
+
+
 
     suspend fun search(
         text: String
@@ -80,12 +93,13 @@ class PhotoRepository(
     }
 
 
-    suspend fun delete(
-        id: Long
-    ) {
-
+    suspend fun delete(      id: Long    ) {
         photoDao.delete(id)
+    }
 
+    suspend fun deleteAll() {
+        photoDao.deleteAllAttachments()
+        photoDao.deleteAllPhotos()
     }
 
 
@@ -188,6 +202,16 @@ class PhotoRepository(
 
     }
 
+    suspend fun deleteAttachments(
+        photoId: Long
+    ) {
+
+        photoDao.deleteAttachments(
+            photoId
+        )
+
+    }
+
 
     suspend fun deleteAttachment(
         attachmentId: Long
@@ -209,6 +233,8 @@ class PhotoRepository(
             category
         )
     }
+
+
 
 }
 

@@ -167,11 +167,24 @@ fun AppNavigation() {
         }
 
         composable(AppScreen.Settings.route) {
+
             SettingsScreen(
                 onCategoriesClick = {
                     navController.navigate(
                         AppScreen.Categories.route
                     )
+                },
+
+                onDeleteAllFinished = {
+                    navController.navigate(
+                        AppScreen.Home.route
+                    ) {
+                        popUpTo(
+                            AppScreen.Settings.route
+                        ) {
+                            inclusive = true
+                        }
+                    }
                 }
             )
         }

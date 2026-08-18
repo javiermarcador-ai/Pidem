@@ -108,6 +108,20 @@ object PidemStorage {
                 )
         }
 
+        if (pidemFolder != null) {
+
+            val noMediaFile =
+                pidemFolder.findFile(".nomedia")
+
+            if (noMediaFile == null) {
+
+                pidemFolder.createFile(
+                    "application/octet-stream",
+                    ".nomedia"
+                )
+            }
+        }
+
         return pidemFolder
     }
 
@@ -129,4 +143,73 @@ object PidemStorage {
             fileName
         )
     }
+
+
+    /**
+     * Elimina físicamente una imagen de Pidem
+     * a partir de la URI almacenada en Room.
+     */
+    fun deleteImage(
+        context: Context,
+        imagePath: String
+    ): Boolean {
+
+        return try {
+
+            val uri = Uri.parse(imagePath)
+
+            val document =
+                DocumentFile.fromSingleUri(
+                    context,
+                    uri
+                )
+
+            document?.delete() == true
+
+        } catch (_: Exception) {
+
+            false
+        }
+    }
+
+    /**
+     * Elimina físicamente toda la carpeta Pidem.
+     *
+     * Esto elimina también:
+     * - fotografías
+     * - fotografías adjuntas
+     * - .nomedia
+     */
+    fun deletePidemFolder(
+        context: Context
+    ): Boolean {
+
+        return try {
+
+            val storageUri = getStorageUri(context)
+                    ?: return false
+
+            val selectedFolder = DocumentFile.fromTreeUri(
+                    context,
+                    storageUri
+                )
+                    ?: return false
+
+            val pidemFolder =
+                selectedFolder.findFile("Pidem")
+
+            /*
+             * Si Pidem ya no existe,
+             * consideramos que el objetivo
+             * ya está cumplido.
+             */
+            if (pidemFolder == null) {  return true
+            }
+            pidemFolder.delete()
+
+        } catch (_: Exception) {
+            false
+        }
+    }
+
 }
