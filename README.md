@@ -8,6 +8,8 @@ La aplicación está pensada para poder fotografiar documentos, obtener el texto
 
 ## Pidem v1.0.0
 
+[Descarga directa de Pidem v1.0.0 para instalar en Android ↗️](https://github.com/javiermarcador-ai/FotoIndex/releases/download/v1.0.0/Pidem.v1.0.0.apk)
+
 Primera versión estable de Pidem.
 
 ### Características
