@@ -7,19 +7,17 @@ class PhotoRepository(
 
 ) {
 
+
     suspend fun insert(
         photo: PhotoRecord
-    ) {
+    ): Long {
 
-        photoDao.insert(photo)
+        return photoDao.insert(photo)
 
     }
 
-
     suspend fun getAll(): List<PhotoRecord> {
-
         return photoDao.getAll()
-
     }
 
 
@@ -42,8 +40,6 @@ class PhotoRepository(
         )
 
     }
-
-
 
 
 
@@ -138,6 +134,13 @@ class PhotoRepository(
 
     }
 
+    suspend fun getAllAttachments(): List<PhotoAttachment> {
+
+        return photoDao.getAllAttachments()
+
+    }
+
+
 
     suspend fun getCategoryByName(
         name: String
@@ -173,11 +176,13 @@ class PhotoRepository(
     suspend fun deleteCategory(
         id: Long
     ) {
-
         categoryDao.delete(
             id
         )
+    }
 
+    suspend fun deleteAllCategories() {
+        categoryDao.deleteAll()
     }
 
 

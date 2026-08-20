@@ -58,4 +58,14 @@ interface CategoryDao {
         FROM categories
     """)
     suspend fun count(): Int
+
+
+    @Query("""
+        DELETE FROM categories
+    """)
+    suspend fun deleteAll()
+
+
+
+
 }

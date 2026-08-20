@@ -16,6 +16,8 @@ import androidx.compose.runtime.setValue
 import es.fotoindex.app.database.Category
 import es.fotoindex.app.ui.CameraPreview
 import es.fotoindex.app.data.PidemStorage
+import es.fotoindex.app.data.PidemExporter
+import es.fotoindex.app.data.PidemImporter
 
 class PhotoViewModel(
     application: Application
@@ -177,17 +179,33 @@ class PhotoViewModel(
         }
     }
 
+    fun deleteAllData(
+        onFinished: (Boolean) -> Unit = {}
+    ) {
 
-    fun deleteAllData(  onFinished: (Boolean) -> Unit = {}  ) {
         viewModelScope.launch {
             repository.deleteAll()
+            repository.deleteAllCategories()
+            repository.insertCategory(
+                Category( name = "Documentos"  )
+            )
+
             val storageDeleted =
                 es.fotoindex.app.data.PidemStorage
                     .deletePidemFolder(
                         getApplication()
                     )
+
             photos.clear()
-            onFinished(storageDeleted)
+            categories.clear()
+            categories.add(
+                Category( name = "Documentos" )
+            )
+
+            selectedCategory = "Documentos"
+            onFinished(
+                storageDeleted
+            )
         }
     }
 
@@ -385,12 +403,323 @@ class PhotoViewModel(
         }
     }
 
+
+    fun exportData(
+        onFinished: (Result<String>) -> Unit
+    ) {
+
+        viewModelScope.launch {
+            try {
+                val photos =  repository.getAll()
+                val attachments =     repository.getAllAttachments()
+                val categories =      repository.getCategories()
+                val result =
+                    PidemExporter.export(
+                        context = getApplication(),
+                        photos = photos,
+                        attachments = attachments,
+                        categories = categories
+                    )
+                onFinished(result)
+
+            } catch (e: Exception) {
+                onFinished(
+                    Result.failure(e)
+                )
+            }
+        }
+    }
+
+    fun importData(
+        fileUri: android.net.Uri,
+        replaceExisting: Boolean,
+        onFinished: (Result<String>) -> Unit
+    ) {
+
+        viewModelScope.launch {
+
+            try {
+
+                /*
+                 * =====================================================
+                 * LEER DATOS DEL ARCHIVO
+                 * =====================================================
+                 */
+
+                val importedResult =
+                    PidemImporter.import(
+                        context = getApplication(),
+                        fileUri = fileUri
+                    )
+
+                if (importedResult.isFailure) {
+
+                    onFinished(
+                        Result.failure(
+                            importedResult.exceptionOrNull()
+                                ?: Exception(
+                                    "No se pudieron leer los datos del archivo"
+                                )
+                        )
+                    )
+
+                    return@launch
+                }
+
+
+                val importedData =
+                    importedResult.getOrThrow()
+
+
+                /*
+                 * =====================================================
+                 * BORRAR DATOS ACTUALES
+                 * =====================================================
+                 */
+
+                if (replaceExisting) {
+
+                    repository.deleteAll()
+
+                    PidemStorage.deletePidemFolder(
+                        getApplication()
+                    )
+                }
+
+
+                /*
+                 * Documentos debe existir siempre.
+                 */
+
+                if (
+                    repository.getCategoryByName(
+                        "Documentos"
+                    ) == null
+                ) {
+
+                    repository.insertCategory(
+                        Category(
+                            name = "Documentos"
+                        )
+                    )
+                }
+
+
+                /*
+                 * =====================================================
+                 * EXTRAER IMÁGENES
+                 * =====================================================
+                 */
+
+                val extractedResult =
+                    PidemImporter.extractAllImages(
+                        context = getApplication(),
+                        fileUri = fileUri,
+                        data = importedData
+                    )
+
+
+                if (extractedResult.isFailure) {
+
+                    onFinished(
+                        Result.failure(
+                            extractedResult.exceptionOrNull()
+                                ?: Exception(
+                                    "No se pudieron extraer las imágenes"
+                                )
+                        )
+                    )
+
+                    return@launch
+                }
+
+
+                val extracted =
+                    extractedResult.getOrThrow()
+
+
+                val firstPhotos =
+                    extracted.first
+
+                val secondPhotos =
+                    extracted.second
+
+                val attachmentImages =
+                    extracted.third
+
+
+                /*
+                 * =====================================================
+                 * FOTOGRAFÍAS
+                 * =====================================================
+                 */
+
+                val photoIdMap =
+                    mutableMapOf<Long, Long>()
+
+
+                importedData.photos.forEach { importedPhoto ->
+
+                    val firstPhotoPath =
+                        firstPhotos[
+                            importedPhoto.oldId
+                        ]
+
+
+                    if (firstPhotoPath == null) {
+
+                        throw Exception(
+                            "No se encontró la imagen principal de la fotografía " +
+                                    importedPhoto.oldId
+                        )
+                    }
+
+
+                    val secondPhotoPath =
+                        secondPhotos[
+                            importedPhoto.oldId
+                        ]
+
+
+                    /*
+                     * Comprobar que la categoría existe.
+                     * Si no existe, utilizamos Documentos.
+                     */
+
+                    val categoryName =
+                        if (
+                            repository.getCategoryByName(
+                                importedPhoto.category
+                            ) != null
+                        ) {
+                            importedPhoto.category
+                        } else {
+                            "Documentos"
+                        }
+
+
+                    val photo =
+                        PhotoRecord(
+
+                            firstPhoto =
+                                firstPhotoPath,
+
+                            secondPhoto =
+                                secondPhotoPath,
+
+                            ocrText =
+                                importedPhoto.ocrText,
+
+                            additionalText =
+                                importedPhoto.additionalText,
+
+                            category =
+                                categoryName,
+
+                            createdAt =
+                                importedPhoto.createdAt
+                        )
+
+
+                    /*
+                     * Room devuelve directamente el nuevo ID.
+                     */
+
+                    val newId =
+                        repository.insert(
+                            photo
+                        )
+
+
+                    photoIdMap[
+                        importedPhoto.oldId
+                    ] =
+                        newId
+                }
+
+
+                /*
+                 * =====================================================
+                 * ADJUNTOS
+                 * =====================================================
+                 */
+
+                importedData.attachments.forEach { importedAttachment ->
+
+                    val newPhotoId =
+                        photoIdMap[
+                            importedAttachment.oldPhotoId
+                        ]
+                            ?: throw Exception(
+                                "No se encontró la fotografía asociada " +
+                                        "al adjunto ${importedAttachment.oldId}"
+                            )
+
+
+                    val imagePath =
+                        attachmentImages[
+                            importedAttachment.oldId
+                        ]
+                            ?: throw Exception(
+                                "No se encontró la imagen del adjunto " +
+                                        importedAttachment.oldId
+                            )
+
+
+                    repository.insertAttachment(
+
+                        es.fotoindex.app.database.PhotoAttachment(
+
+                            photoId =
+                                newPhotoId,
+
+                            imagePath =
+                                imagePath,
+
+                            createdAt =
+                                importedAttachment.createdAt
+                        )
+                    )
+                }
+
+
+                /*
+                 * =====================================================
+                 * ACTUALIZAR LISTADOS
+                 * =====================================================
+                 */
+
+                loadCategories()
+
+                loadPhotos()
+
+
+                onFinished(
+                    Result.success(
+                        "Importación completada correctamente.\n\n" +
+                                "Fotografías importadas: " +
+                                importedData.photos.size +
+                                "\nAdjuntos importados: " +
+                                importedData.attachments.size +
+                                "\n\nLos documentos importados sin categoría existente " +
+                                "\nse incluirán en la categoría \"Documentos\"."
+                    )
+                )
+
+
+            } catch (e: Exception) {
+
+                onFinished(
+                    Result.failure(e)
+                )
+            }
+        }
+    }
+
+
     /*
      * Búsqueda
      */
-
-
-
     fun search(
         text: String,
         searchInNotes: Boolean

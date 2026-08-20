@@ -185,6 +185,18 @@ fun AppNavigation() {
                             inclusive = true
                         }
                     }
+                },
+
+                onImportFinished = {
+                    navController.navigate(
+                        AppScreen.Home.route
+                    ) {
+                        popUpTo(
+                            AppScreen.Settings.route
+                        ) {
+                            inclusive = true
+                        }
+                    }
                 }
             )
         }

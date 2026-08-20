@@ -1,6 +1,5 @@
 package es.fotoindex.app.ui
 
-import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -37,11 +36,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import es.fotoindex.app.data.PidemStorage
 import es.fotoindex.app.viewmodel.PhotoViewModel
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.TextButton
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.ui.res.painterResource
 import es.fotoindex.app.R
 import androidx.compose.ui.text.style.TextAlign
@@ -59,9 +55,9 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.repeatOnLifecycle
-import androidx.compose.ui.platform.LocalLifecycleOwner
+import android.content.ActivityNotFoundException
+import androidx.core.content.FileProvider
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 
@@ -508,7 +504,7 @@ fun HomeScreen(
             title = {
 
                 Text(
-                    text = "Pidem",
+                    text = "Pidem v1.0.0",
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.headlineSmall
@@ -520,30 +516,103 @@ fun HomeScreen(
                 Column(
                     modifier = Modifier.fillMaxWidth()
                 ) {
+
                     Text(
                         text = "Proyecto de Imáganes y Documentos Electrónicos para Móvil.",
                         textAlign = TextAlign.Center,
                         style = MaterialTheme.typography.bodySmall
                     )
 
-                    Spacer( modifier = Modifier.height(16.dp) )
+                    Spacer(
+                        modifier = Modifier.height(16.dp)
+                    )
 
                     Text(
                         text = buildAnnotatedString {
                             append("Desarrollado por ")
                             withStyle(
-                                SpanStyle(fontWeight = FontWeight.Bold),
+                                SpanStyle(fontWeight = FontWeight.Bold)
                             ) {
-                                append("Lagoart®-'74")
+                                append("Lagoart®-soft")
                             }
                             append(" 2026")
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.bodySmall
                     )
 
                     Spacer(
                         modifier = Modifier.height(24.dp)
+                    )
+
+                    /*
+                     * MANUAL DEL USUARIO
+                     */
+                    Text(
+                        text = "Ver Manual del usuario",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+
+                                val pdfFile =
+                                    java.io.File(
+                                        context.cacheDir,
+                                        "manual_pidem.pdf"
+                                    )
+
+                                context.resources
+                                    .openRawResource(R.raw.manual_pidem)
+                                    .use { input ->
+
+                                        pdfFile.outputStream().use { output ->
+
+                                            input.copyTo(output)
+                                        }
+                                    }
+
+                                val pdfUri =
+                                    FileProvider.getUriForFile(
+                                        context,
+                                        "${context.packageName}.provider",
+                                        pdfFile
+                                    )
+
+                                val intent =
+                                    Intent(Intent.ACTION_VIEW).apply {
+
+                                        setDataAndType(
+                                            pdfUri,
+                                            "application/pdf"
+                                        )
+
+                                        addFlags(
+                                            Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                        )
+                                    }
+
+                                try {
+
+                                    context.startActivity(intent)
+
+                                } catch (e: ActivityNotFoundException) {
+
+                                    android.widget.Toast.makeText(
+                                        context,
+                                        "No hay ninguna aplicación disponible para abrir el PDF.",
+                                        android.widget.Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            },
+                        textAlign = TextAlign.Center,
+                        color = Color(0xFF6A5ACD),
+                        fontStyle = FontStyle.Italic,
+                        textDecoration = TextDecoration.Underline
+                    )
+
+
+                    Spacer(
+                        modifier = Modifier.height(32.dp)
                     )
 
                     Text(
@@ -592,6 +661,8 @@ fun HomeScreen(
                     )
                 }
             },
+
+
 
             confirmButton = {
 

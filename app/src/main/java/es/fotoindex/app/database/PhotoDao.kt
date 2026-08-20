@@ -7,11 +7,11 @@ import androidx.room.Query
 @Dao
 interface PhotoDao {
 
+
     @Insert
     suspend fun insert(
         photo: PhotoRecord
-    )
-
+    ): Long
 
     @Query("""
         SELECT *
@@ -43,8 +43,15 @@ interface PhotoDao {
         id: Long
     ): PhotoRecord?
 
-
-
+/*
+    @Query("""
+        SELECT *
+        FROM photos
+        ORDER BY createdAt DESC
+        LIMIT 1
+    """)
+    suspend fun getLatestPhoto(): PhotoRecord?
+*/
 
     @Query("""
         SELECT *
@@ -175,6 +182,14 @@ interface PhotoDao {
     suspend fun getAttachments(
         photoId: Long
     ): List<PhotoAttachment>
+
+    @Query("""
+    SELECT *
+    FROM photo_attachments
+    ORDER BY createdAt ASC
+""")
+    suspend fun getAllAttachments(): List<PhotoAttachment>
+
 
     @Query("""
     DELETE FROM photo_attachments
