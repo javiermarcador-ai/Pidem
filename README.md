@@ -58,7 +58,7 @@ Al ejecutar Pidem por primera vez, la aplicación solicitará al usuario que sel
 ### Selección de la carpeta
 
 1. Pulsa **«Seleccionar carpeta»**.
-2. Elige la carpeta donde deseas almacenar las imágenes de Pidem.
+2. Elige la carpeta donde deseas almacenar las imágenes de Pidem. (se recomienda seleccionar la carpeta "**/images/** ")
 3. Pulsa **«Usar esta carpeta»**.
 4. Concede a Pidem el permiso solicitado por Android.
 
@@ -70,7 +70,7 @@ La carpeta seleccionada será utilizada por Pidem para almacenar las fotografía
 
 La ubicación de esta carpeta es elegida por el usuario durante el primer inicio.
 
-El desarrollador **recomienda instalar** la aplicación en el lugar que se propone por defecto, siendo solamente necesario otorgar permiso a la **carpeta inicial**.  
+Se **recomienda seleccionar** en la carpeta "**/images/** " para la instalación, siendo solamente necesario otorgar permiso a la **carpeta inicial**.  
 
 ---
 
